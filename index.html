@@ -91,7 +91,7 @@
     }
     .header h1 { font-size: 1.85rem; font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
     .sub { color: var(--theme-muted); font-size: .88rem; margin-top: 4px; }
-    .header-about { display:flex; justify-content:center; align-items:center; justify-self:center; }
+    .header-about { display:flex; justify-content:center; align-items:center; justify-self:center; width:100%; }
     .meta { display:flex; gap: 14px; align-items:center; flex-wrap:wrap; justify-content:flex-end; justify-self:end; }
     .stamp, .pill, .search {
       border: 1px solid var(--theme-border);
@@ -143,6 +143,50 @@
     th { position: sticky; top: 0; background: var(--theme-card); z-index: 2; font-size: .74rem; text-transform: uppercase; color: var(--theme-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.6px; }
     tr.schedule-row { cursor:pointer; background: var(--theme-card); }
     tr.schedule-row:hover { background: color-mix(in srgb, var(--theme-cyan) 6%, var(--theme-card)); }
+
+    .schedule-action-cell { width: 180px; }
+    .schedule-action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 144px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--theme-border);
+      background: rgba(127,147,170,.08);
+      color: var(--theme-text);
+      font-size: .74rem;
+      font-weight: 900;
+      letter-spacing: .3px;
+      cursor: pointer;
+      transition: .16s ease;
+      white-space: nowrap;
+    }
+    .schedule-action-btn:hover { transform: translateY(-1px); }
+    .schedule-action-btn.today {
+      border-color: color-mix(in srgb, var(--theme-orange) 58%, var(--theme-border));
+      background: linear-gradient(90deg, color-mix(in srgb, var(--theme-orange) 18%, var(--theme-card)) 0%, color-mix(in srgb, var(--theme-orange) 8%, var(--theme-card)) 100%);
+      color: var(--theme-orange);
+      box-shadow: inset 8px 0 0 color-mix(in srgb, var(--theme-orange) 85%, transparent);
+    }
+    .schedule-action-btn.live {
+      border-color: color-mix(in srgb, var(--theme-green) 62%, var(--theme-border));
+      background: linear-gradient(90deg, color-mix(in srgb, var(--theme-green) 20%, var(--theme-card)) 0%, color-mix(in srgb, var(--theme-green) 8%, var(--theme-card)) 100%);
+      color: var(--theme-green);
+      box-shadow: inset 8px 0 0 color-mix(in srgb, var(--theme-green) 90%, transparent), 0 0 16px color-mix(in srgb, var(--theme-green) 12%, transparent);
+      animation: livePulse 1.6s ease-in-out infinite;
+    }
+    .schedule-action-btn.dim {
+      border-color: color-mix(in srgb, var(--theme-cyan) 52%, var(--theme-border));
+      background: linear-gradient(90deg, color-mix(in srgb, var(--theme-cyan) 18%, var(--theme-card)) 0%, color-mix(in srgb, var(--theme-purple) 10%, var(--theme-card)) 100%);
+      color: var(--theme-cyan);
+      box-shadow: inset 8px 0 0 color-mix(in srgb, var(--theme-cyan) 84%, transparent);
+      cursor: default;
+    }
+    @keyframes livePulse {
+      0%, 100% { box-shadow: inset 8px 0 0 color-mix(in srgb, var(--theme-green) 90%, transparent), 0 0 0 rgba(0,255,136,0); }
+      50% { box-shadow: inset 8px 0 0 color-mix(in srgb, var(--theme-green) 90%, transparent), 0 0 14px rgba(0,255,136,.18); }
+    }
 
     .stage-badge {
       display:inline-flex;
@@ -512,21 +556,21 @@
     .img-link { display:inline-block; margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--theme-cyan); color: var(--theme-bg); text-decoration:none; font-weight:900; }
 
 
-    .world-times-wrap { padding: 14px; }
+    .world-times-wrap { display:flex; align-items:center; justify-content:center; gap:14px; padding: 14px; }
+    .world-times-label {
+      background: color-mix(in srgb, var(--theme-gold) 16%, var(--theme-card));
+      color: var(--theme-gold);
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--theme-gold) 38%, var(--theme-border));
+      font-size: .72rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap; text-transform: uppercase;
+    }
     .world-times-grid {
-      width: 100%;
-      display: grid;
-      grid-template-columns: repeat(11, minmax(112px, 1fr));
-      gap: 12px;
-      align-items: stretch;
+      width:100%;
+      display:grid;
+      grid-template-columns: repeat(11, minmax(116px, 1fr));
+      gap:12px;
     }
-    .world-time-card.is-local-time {
-      border-color: color-mix(in srgb, var(--theme-gold) 52%, var(--theme-border));
-      background: linear-gradient(180deg, color-mix(in srgb, var(--theme-gold) 18%, var(--theme-card)), color-mix(in srgb, var(--theme-gold) 8%, var(--theme-card)));
-      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-gold) 22%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-gold) 18%, transparent);
-    }
-    .world-time-card.is-local-time .world-time-city { color: var(--theme-gold); }
-    .world-time-card.is-local-time .world-time-sub { color: var(--theme-text); font-weight: 700; }
     .world-time-card {
       text-decoration:none;
       color: var(--theme-text);
@@ -537,6 +581,7 @@
       display:grid;
       gap:6px;
       min-height: 92px;
+      align-content: center;
       box-shadow: inset 0 1px 0 color-mix(in srgb, var(--card-accent) 20%, transparent);
       transition: .18s ease;
     }
@@ -544,9 +589,22 @@
       transform: translateY(-2px);
       box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-accent) 52%, transparent), 0 8px 24px color-mix(in srgb, var(--card-accent) 16%, transparent);
     }
+    .world-time-card.local-time-card {
+      border-color: color-mix(in srgb, var(--theme-gold) 56%, var(--theme-border));
+      background: linear-gradient(180deg, color-mix(in srgb, var(--theme-gold) 16%, var(--theme-card)), color-mix(in srgb, var(--theme-gold) 7%, var(--theme-card)));
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-gold) 24%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-gold) 16%, transparent);
+    }
     .world-time-city { font-weight: 900; letter-spacing: .3px; color: var(--card-accent); }
     .world-time-sub { color: var(--theme-muted); font-size: .73rem; line-height: 1.2; }
     .world-time-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.02rem; font-weight: 900; color: var(--theme-text); }
+    .world-time-card.local-time { border-color: color-mix(in srgb, var(--theme-gold) 55%, var(--theme-border)); background: color-mix(in srgb, var(--theme-gold) 14%, var(--theme-card)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-gold) 20%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-gold) 18%, transparent); }
+    .world-time-card.local-time .world-time-city { color: var(--theme-gold); }
+    html[data-theme="light"] .ticker-link, html[data-theme="light"] .ticker-label, html[data-theme="light"] .section-title, html[data-theme="light"] .stage-head, html[data-theme="light"] .route-next strong, html[data-theme="light"] .team-name, html[data-theme="light"] .fixture-line, html[data-theme="light"] .about-link-btn, html[data-theme="light"] .pill, html[data-theme="light"] .group-route-label { color: var(--theme-text); }
+    html[data-theme="light"] .ticker-label { color: var(--theme-pink); }
+    html[data-theme="light"] .section-title { color: var(--theme-cyan); }
+    html[data-theme="light"] .world-time-sub, html[data-theme="light"] .meta-line, html[data-theme="light"] .group-head span, html[data-theme="light"] .route-next, html[data-theme="light"] .bracket-date, html[data-theme="light"] .about-page-sub, html[data-theme="light"] .about-card p, html[data-theme="light"] .about-card li, html[data-theme="light"] .about-signoff, html[data-theme="light"] .info-strip .k, html[data-theme="light"] .time-box span, html[data-theme="light"] .sub { color: var(--theme-muted); }
+    html[data-theme="light"] .stamp { color: var(--theme-text); }
+    html[data-theme="light"] .modal-card, html[data-theme="light"] .about-page-card { color: var(--theme-text); }
 
 
     html[data-theme="light"] body { color: var(--theme-text); }
@@ -630,13 +688,14 @@
       .top-grid, .diagram-layout { grid-template-columns: 1fr; }
       .group-route-grid { grid-template-columns: repeat(2, 1fr); }
       .groups-tabs { grid-template-columns: repeat(3, 1fr); }
-      .world-times-grid { grid-template-columns: repeat(4, minmax(120px, 1fr)); }
+      .world-times-grid { grid-template-columns: repeat(4, 1fr); }
+      .world-times-wrap { flex-direction: column; }
     }
     @media (max-width: 760px) {
       .header { flex-direction: column; align-items:flex-start; }
       .group-route-grid { grid-template-columns: 1fr; }
       .times { grid-template-columns: 1fr; }
-      .world-times-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
+      .world-times-grid { grid-template-columns: repeat(2, 1fr); }
     }
     @media print {
       body {
@@ -715,7 +774,7 @@
         <div class="schedule-table-wrap">
           <table>
             <thead>
-              <tr><th>Date</th><th>Time</th><th>Stage</th><th>Fixture</th><th>Venue</th></tr>
+              <tr><th>Date</th><th>Time</th><th>Stage</th><th>Fixture</th><th>Venue</th><th class="schedule-action-cell">Status</th></tr>
             </thead>
             <tbody id="scheduleBody"></tbody>
           </table>
@@ -905,11 +964,11 @@
       { label: 'Paris', sub: 'France', zone: 'Europe/Paris', query: 'Paris world clock time difference', color: '#7c3aed' },
       { label: 'London', sub: 'United Kingdom', zone: 'Europe/London', query: 'London world clock time difference', color: '#2563eb' },
       { label: 'Beijing', sub: 'China', zone: 'Asia/Shanghai', query: 'Beijing China world clock time difference', color: '#db2777' },
+      { label: 'Tokyo', sub: 'Japan', zone: 'Asia/Tokyo', query: 'Tokyo Japan world clock time difference', color: '#ec4899' },
       { label: 'Los Angeles', sub: 'USA', zone: 'America/Los_Angeles', query: 'Los Angeles world clock time difference', color: '#ea580c' },
+      { label: 'Local Time', sub: 'Your device', zone: null, query: 'local time world clock time difference', color: '#cda515', local: true },
       { label: 'New York', sub: 'USA', zone: 'America/New_York', query: 'New York world clock time difference', color: '#0f766e' },
-      { label: 'Local Time', sub: 'Your device time', zone: null, query: 'local time now', color: '#f59e0b', local: true },
       { label: 'Sydney', sub: 'Australia', zone: 'Australia/Sydney', query: 'Sydney world clock time difference', color: '#0891b2' },
-      { label: 'Tokyo', sub: 'Japan', zone: 'Asia/Tokyo', query: 'Tokyo world clock time difference', color: '#ec4899' },
       { label: 'Brasília', sub: 'Brazil', zone: 'America/Sao_Paulo', query: 'Brasilia Brazil world clock time difference', color: '#65a30d' },
       { label: 'Buenos Aires', sub: 'Argentina', zone: 'America/Argentina/Buenos_Aires', query: 'Buenos Aires Argentina world clock time difference', color: '#ca8a04' },
       { label: 'Bogotá', sub: 'Colombia', zone: 'America/Bogota', query: 'Bogota Colombia world clock time difference', color: '#dc2626' }
@@ -921,10 +980,8 @@
       root.innerHTML = '';
       WORLD_TIME_CITIES.forEach((city, idx) => {
         const a = document.createElement('a');
-        a.className = `world-time-card${city.local ? ' is-local-time' : ''}`;
-        a.href = city.local
-          ? `https://www.google.com/search?q=${encodeURIComponent('local time now')}`
-          : `https://www.google.com/search?q=${encodeURIComponent(city.query)}`;
+        a.className = `world-time-card${city.local ? ' local-time' : ''}`;
+        a.href = `https://www.google.com/search?q=${encodeURIComponent(city.query)}`;
         a.target = '_blank';
         a.rel = 'noopener noreferrer';
         a.style.setProperty('--card-accent', city.color);
@@ -942,12 +999,8 @@
         const el = document.getElementById(`worldTimeValue-${idx}`);
         if (!el) return;
         const value = city.local
-          ? new Intl.DateTimeFormat('en-GB', {
-              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            }).format(new Date())
-          : new Intl.DateTimeFormat('en-GB', {
-              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: city.zone
-            }).format(new Date());
+          ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date())
+          : new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: city.zone }).format(new Date());
         el.textContent = value;
       });
     }
@@ -1490,18 +1543,30 @@ Final New York New Jersey Stadium`;
 
     function renderUpcoming() {
       const root = document.getElementById('upcomingList');
+      root.innerHTML = '';
       upcomingMatches().forEach((m, i) => {
         const card = document.createElement('div');
         card.className = 'match-card';
         const dayNum = m.date.split(' ').pop();
         const month = m.date.split(', ')[1].split(' ')[0].slice(0,3).toUpperCase();
+        const action = getScheduleActionState(m);
         card.innerHTML = `
           <div class="date-badge"><small>${month}</small><strong>${dayNum}</strong></div>
           <div>
-            <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()} • ${m.time}</div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+              <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()} • ${m.time}</div>
+              <button type="button" class="schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}" ${action.interactive ? '' : 'disabled'} data-watch="${i}">${action.label}</button>
+            </div>
             <div class="fixture-line">${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</div>
             <div class="countdown" id="count-${i}">--h --m --s</div>
           </div>`;
+        const watchBtn = card.querySelector('[data-watch]');
+        if (watchBtn && action.interactive) {
+          watchBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer');
+          });
+        }
         card.addEventListener('mouseenter', () => focusMatch(m));
         card.addEventListener('mouseleave', clearMapHighlights);
         card.addEventListener('click', () => openModal(m));
@@ -1509,8 +1574,53 @@ Final New York New Jersey Stadium`;
       });
     }
 
+    function parseMatchDateTime(match) {
+      const dateMatch = String(match.date || '').match(/^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2})$/);
+      if (!dateMatch) return null;
+      const monthMap = { January:0, February:1, March:2, April:3, May:4, June:5, July:6, August:7, September:8, October:9, November:10, December:11 };
+      const month = monthMap[dateMatch[1]];
+      const day = Number(dateMatch[2]);
+      const timeMatch = String(match.time || '').match(/^(\d{1,2}):(\d{2})\s(AM|PM)$/i);
+      if (month == null || !timeMatch) return null;
+      let hour = Number(timeMatch[1]) % 12;
+      const minute = Number(timeMatch[2]);
+      const meridiem = timeMatch[3].toUpperCase();
+      if (meridiem === 'PM') hour += 12;
+      return new Date(2026, month, day, hour, minute, 0, 0);
+    }
+
+    function formatShortCountdown(ms) {
+      const totalMinutes = Math.max(0, Math.floor(ms / 60000));
+      const days = Math.floor(totalMinutes / 1440);
+      const hours = Math.floor((totalMinutes % 1440) / 60);
+      const minutes = totalMinutes % 60;
+      if (days > 0) return `${days}d ${hours}h`;
+      if (hours > 0) return `${hours}h ${minutes}m`;
+      return `${minutes}m`;
+    }
+
+    function getScheduleActionState(match) {
+      const start = parseMatchDateTime(match);
+      if (!start) return { type: 'none', label: 'Scheduled', interactive: false };
+      const now = new Date();
+      const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+      const isToday = now.getFullYear() === start.getFullYear() && now.getMonth() === start.getMonth() && now.getDate() === start.getDate();
+      if (now >= start && now <= end) {
+        return { type: 'live', label: 'LIVE NOW', interactive: true };
+      }
+      if (isToday && now < start) {
+        return { type: 'today', label: `TODAY • ${formatShortCountdown(start - now)}`, interactive: true };
+      }
+      return { type: 'none', label: 'Scheduled', interactive: false };
+    }
+
+    function buildWatchUrl(match) {
+      return `https://www.google.com/search?q=${encodeURIComponent(`where to watch world cup ${match.home} vs ${match.away}`)}`;
+    }
+
     function renderScheduleTable() {
       const body = document.getElementById('scheduleBody');
+      body.innerHTML = '';
       const stagePalette = {
         'Round of 32': cssVar('--theme-cyan'),
         'Round of 16': cssVar('--theme-pink'),
@@ -1524,7 +1634,22 @@ Final New York New Jersey Stadium`;
         tr.className = 'schedule-row';
         const stage = m.stage === 'Group stage' ? `Group ${m.group}` : m.stage;
         const stageColor = m.stage === 'Group stage' ? groupColor(m.group) : (stagePalette[m.stage] || cssVar('--theme-cyan'));
-        tr.innerHTML = `<td>${m.date}</td><td>${m.time}</td><td><span class="stage-badge" style="--stage-color:${stageColor};">${stage}</span></td><td>${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</td><td>${m.venue}</td>`;
+        const action = getScheduleActionState(m);
+        tr.innerHTML = `<td>${m.date}</td><td>${m.time}</td><td><span class="stage-badge" style="--stage-color:${stageColor};">${stage}</span></td><td>${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</td><td>${m.venue}</td><td class="schedule-action-cell"></td>`;
+        const actionCell = tr.querySelector('.schedule-action-cell');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}`;
+        btn.textContent = action.label;
+        if (action.interactive) {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer');
+          });
+        } else {
+          btn.disabled = true;
+        }
+        actionCell.appendChild(btn);
         tr.addEventListener('mouseenter', () => focusMatch(m));
         tr.addEventListener('mouseleave', clearMapHighlights);
         tr.addEventListener('click', () => openModal(m));
@@ -1865,13 +1990,24 @@ Final New York New Jersey Stadium`;
     function updateCountdowns() {
       upcomingMatches().forEach((m, i) => {
         const node = document.getElementById(`count-${i}`); if (!node) return;
-        node.textContent = `SCHEDULED • ${m.time}`;
+        const action = getScheduleActionState(m);
+        if (action.type === 'live') {
+          node.textContent = 'LIVE NOW';
+          node.style.color = cssVar('--theme-green');
+        } else if (action.type === 'today') {
+          node.textContent = action.label;
+          node.style.color = cssVar('--theme-orange');
+        } else {
+          node.textContent = `SCHEDULED • ${m.time}`;
+          node.style.color = cssVar('--theme-green');
+        }
       });
+      renderScheduleTable();
     }
 
     function initMaps() {
-      geoMap = L.map('geoMap', { zoomControl:false, attributionControl:false }).setView([20, -25], 1);
-      stadiumMap = L.map('stadiumMap', { zoomControl:false, attributionControl:false }).setView([35, -95], 2);
+      geoMap = L.map('geoMap', { zoomControl:true, attributionControl:false }).setView([18, 8], 1.3);
+      stadiumMap = L.map('stadiumMap', { zoomControl:true, attributionControl:false }).setView([35, -95], 2);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(geoMap);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(stadiumMap);
       applyTheme(document.documentElement.dataset.theme || 'dark');
