@@ -1554,11 +1554,10 @@ Final New York New Jersey Stadium`;
           <div class="date-badge"><small>${month}</small><strong>${dayNum}</strong></div>
           <div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-              <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()} • ${m.time}</div>
-              <button type="button" class="schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}" ${action.interactive ? '' : 'disabled'} data-watch="${i}">${action.label}</button>
+              <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()}</div>
+              <button type="button" id="upcoming-action-${i}" class="schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}" ${action.interactive ? '' : 'disabled'} data-watch="${i}">${action.label}</button>
             </div>
             <div class="fixture-line">${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</div>
-            <div class="countdown" id="count-${i}">--h --m --s</div>
           </div>`;
         const watchBtn = card.querySelector('[data-watch]');
         if (watchBtn && action.interactive) {
@@ -1601,7 +1600,7 @@ Final New York New Jersey Stadium`;
 
     function getScheduleActionState(match) {
       const start = parseMatchDateTime(match);
-      if (!start) return { type: 'none', label: 'Scheduled', interactive: false };
+      if (!start) return { type: 'none', label: `SCHEDULED • ${match.time}`, interactive: false };
       const now = new Date();
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
       const isToday = now.getFullYear() === start.getFullYear() && now.getMonth() === start.getMonth() && now.getDate() === start.getDate();
@@ -1611,7 +1610,7 @@ Final New York New Jersey Stadium`;
       if (isToday && now < start) {
         return { type: 'today', label: `TODAY • ${formatShortCountdown(start - now)}`, interactive: true };
       }
-      return { type: 'none', label: 'Scheduled', interactive: false };
+      return { type: 'none', label: `SCHEDULED • ${match.time}`, interactive: false };
     }
 
     function buildWatchUrl(match) {
@@ -1989,17 +1988,14 @@ Final New York New Jersey Stadium`;
 
     function updateCountdowns() {
       upcomingMatches().forEach((m, i) => {
-        const node = document.getElementById(`count-${i}`); if (!node) return;
+        const btn = document.getElementById(`upcoming-action-${i}`); if (!btn) return;
         const action = getScheduleActionState(m);
-        if (action.type === 'live') {
-          node.textContent = 'LIVE NOW';
-          node.style.color = cssVar('--theme-green');
-        } else if (action.type === 'today') {
-          node.textContent = action.label;
-          node.style.color = cssVar('--theme-orange');
+        btn.textContent = action.label;
+        btn.className = `schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}`;
+        if (action.interactive) {
+          btn.disabled = false;
         } else {
-          node.textContent = `SCHEDULED • ${m.time}`;
-          node.style.color = cssVar('--theme-green');
+          btn.disabled = true;
         }
       });
       renderScheduleTable();
