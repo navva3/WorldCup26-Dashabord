@@ -6,6 +6,7 @@
   <title>NAVVA+ - Tournament Command Matrix</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
   <style>
     :root {
       --theme-bg: #02050f;
@@ -25,6 +26,10 @@
       --group-A: #ff5f7a; --group-B: #4f8cff; --group-C: #00c2a8; --group-D: #ff8a3d;
       --group-E: #a970ff; --group-F: #e7d21a; --group-G: #ff4747; --group-H: #22c55e;
       --group-I: #f542ff; --group-J: #84cc16; --group-K: #22d3ee; --group-L: #ff7eb6;
+      --map-fill-soft: rgba(0,240,255,.08);
+      --map-fill-strong: rgba(0,240,255,.28);
+      --map-stroke-soft: rgba(0,240,255,.16);
+      --map-stroke-strong: rgba(0,240,255,.9);
     }
 
     html[data-theme="light"] {
@@ -45,6 +50,10 @@
       --group-A: #d62839; --group-B: #2563eb; --group-C: #0f9f8c; --group-D: #ea580c;
       --group-E: #7c3aed; --group-F: #a16207; --group-G: #dc2626; --group-H: #16a34a;
       --group-I: #c026d3; --group-J: #65a30d; --group-K: #0891b2; --group-L: #db2777;
+      --map-fill-soft: rgba(0,102,204,.07);
+      --map-fill-strong: rgba(0,102,204,.22);
+      --map-stroke-soft: rgba(0,102,204,.18);
+      --map-stroke-strong: rgba(0,102,204,.82);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -126,6 +135,7 @@
     .top-grid { display:grid; grid-template-columns: 1.15fr .85fr; gap:20px; }
     .map-box { height: 520px; }
     #geoMap, #stadiumMap { width:100%; height:100%; border-radius: 12px; border:1px solid var(--theme-border); }
+    .map-status { margin-bottom: 12px; color: var(--theme-muted); font-size: .78rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     .side-col { display:grid; gap:20px; grid-template-rows: 1fr; }
     .upcoming-list { display:grid; gap:12px; max-height: 450px; overflow:auto; padding-right:4px; }
     .section-title { display:inline-flex; align-items:center; gap:10px; margin-bottom: 14px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--theme-border); background: color-mix(in srgb, var(--theme-cyan) 10%, var(--theme-card)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-cyan) 18%, transparent); font-size: .92rem; font-weight: 900; letter-spacing: 1px; text-transform: uppercase; color: var(--theme-cyan); }
@@ -144,14 +154,15 @@
     .meta-line { font-size:.72rem; color: var(--theme-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; }
     .fixture-line { font-size:.96rem; font-weight:800; margin: 4px 0 4px; }
     .local-kickoff-line { font-size:.76rem; color: var(--theme-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight:700; }
-    .countdown { display:inline-block; padding: 3px 7px; border-radius: 8px; font-size: .78rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--theme-green); background: rgba(0,255,136,.08); border:1px solid rgba(0,255,136,.16); }
 
     .schedule-table-wrap { max-height: 340px; overflow:auto; border:1px solid var(--theme-border); border-radius:12px; }
     table { width:100%; border-collapse: collapse; }
     th, td { padding: 11px 10px; border-bottom: 1px solid rgba(127,147,170,.08); text-align:left; }
     th { position: sticky; top: 0; background: var(--theme-card); z-index: 2; font-size: .74rem; text-transform: uppercase; color: var(--theme-muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.6px; }
     tr.schedule-row { cursor:pointer; background: var(--theme-card); }
-    tr.schedule-row:hover { background: color-mix(in srgb, var(--theme-cyan) 6%, var(--theme-card)); }
+    tr.schedule-row:hover,
+    tr.group-team-row:hover,
+    .group-route-team:hover { background: color-mix(in srgb, var(--theme-cyan) 6%, var(--theme-card)); }
 
     .schedule-action-cell { width: 180px; }
     .schedule-action-btn {
@@ -233,12 +244,7 @@
       cursor: pointer;
       transition: .16s ease;
     }
-    .group-tab::after { display:none; }
-    .group-tab:hover {
-      transform: translateY(-1px);
-      border-color: color-mix(in srgb, var(--group-color) 75%, var(--theme-border));
-      box-shadow: inset 8px 0 0 color-mix(in srgb, var(--group-color) 92%, transparent), 0 8px 18px rgba(0,0,0,.12);
-    }
+    .group-tab:hover { transform: translateY(-1px); }
     .group-tab.active {
       background: linear-gradient(90deg, color-mix(in srgb, var(--group-color) 30%, var(--theme-card)) 0%, color-mix(in srgb, var(--group-color) 14%, var(--theme-card)) 100%);
       border-color: color-mix(in srgb, var(--group-color) 88%, var(--theme-border));
@@ -250,11 +256,7 @@
     .group-head span { color: var(--theme-muted); font-size: .76rem; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
     .qualified { background: color-mix(in srgb, var(--theme-cyan) 5%, var(--theme-card)); }
     .flag { font-size: 1.18rem; margin-right: 8px; }
-
-    .diagram-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; }
-    .search { padding: 10px 12px; min-width: min(460px, 100%); color: var(--theme-text); outline:none; }
-    .legend { display:flex; gap:10px; flex-wrap:wrap; }
-    .pill { padding: 8px 10px; font-size: .76rem; color: var(--theme-text); }
+    .group-team-row { cursor: pointer; }
 
     .diagram-toolbar { display:flex; gap:12px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; }
     .search { padding: 10px 12px; min-width: min(460px, 100%); color: var(--theme-text); outline:none; }
@@ -303,6 +305,7 @@
       padding:9px 12px;
       font-size:.8rem;
       border-top:1px solid rgba(127,147,170,.08);
+      cursor: pointer;
     }
     .group-route-team:first-child { border-top:none; }
     .group-route-rank {
@@ -455,57 +458,6 @@
       opacity:1;
     }
 
-
-    @media (max-width: 1460px) {
-      .diagram-layout { grid-template-columns: 1fr; }
-      .group-route-column {
-        grid-template-columns: repeat(3, minmax(220px, 1fr));
-      }
-    }
-    @media (max-width: 980px) {
-      .group-route-column {
-        grid-template-columns: repeat(2, minmax(220px, 1fr));
-      }
-    }
-
-    .about-band {
-      margin: 0 20px 20px;
-      padding: 16px 18px;
-      border: 1px solid var(--theme-border);
-      border-radius: 14px;
-      background: rgba(127,147,170,.08);
-      display: grid;
-      gap: 10px;
-    }
-    .about-title { font-size: 1rem; font-weight: 800; letter-spacing: .4px; color: var(--theme-text); }
-    .about-copy { color: var(--theme-muted); line-height: 1.55; font-size: .92rem; }
-    .about-meta { display:flex; gap:10px; flex-wrap:wrap; }
-    .about-pill {
-      display:inline-flex; align-items:center; gap:8px;
-      padding: 7px 12px; border-radius: 999px;
-      border:1px solid var(--theme-border);
-      background: rgba(127,147,170,.08);
-      color: var(--theme-text); font-size: .78rem; font-weight: 700;
-    }
-    .about-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top: 2px; }
-    .about-link-btn {
-      display:inline-flex; align-items:center; justify-content:center;
-      padding: 10px 14px; border-radius: 999px;
-      border:1px solid var(--theme-border-strong);
-      background: linear-gradient(180deg, rgba(0,240,255,.12), rgba(0,240,255,.04));
-      color: var(--theme-text); font-weight: 800; font-size: .84rem;
-      cursor: pointer; text-decoration: none;
-      transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
-    }
-    .about-link-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 0 0 1px var(--theme-border-strong), 0 6px 20px rgba(0,240,255,.10);
-    }
-    .about-link-btn.secondary {
-      background: rgba(127,147,170,.08);
-      border-color: var(--theme-border);
-      color: var(--theme-muted);
-    }
     .about-page-overlay {
       position: fixed; inset: 0; display: none; align-items: center; justify-content: center;
       padding: 20px; z-index: 3200; background: rgba(2,4,10,.88); backdrop-filter: blur(10px);
@@ -522,7 +474,7 @@
     }
     .about-page-head h2 { font-size: 1.5rem; font-weight: 900; letter-spacing: .8px; }
     .about-page-sub { color: var(--theme-muted); margin-top: 6px; line-height: 1.5; }
-    .about-page-close {
+    .about-page-close, .modal-close {
       border:none; background: transparent; color: var(--theme-muted); cursor:pointer;
       font-size: 1.8rem; line-height: 1; padding: 2px 6px;
     }
@@ -549,13 +501,10 @@
       padding-top: 8px; border-top: 1px solid var(--theme-border);
       color: var(--theme-muted); font-size: .88rem;
     }
-    @media (max-width: 860px) {
-      .about-grid { grid-template-columns: 1fr; }
-    }
+
     .modal-overlay { position:fixed; inset:0; background: rgba(2,4,10,.84); display:none; align-items:center; justify-content:center; z-index:3000; backdrop-filter: blur(8px); }
     .modal-card { width:min(560px, 94vw); background: var(--theme-panel); border:1px solid var(--theme-cyan); border-radius: 16px; box-shadow: 0 0 36px rgba(0,240,255,.18); padding: 24px; }
     .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px; }
-    .modal-close { border:none; background:transparent; color: var(--theme-muted); cursor:pointer; font-size:1.6rem; }
     .info-strip { background: var(--theme-card); border:1px solid var(--theme-border); border-left: 4px solid var(--theme-pink); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
     .info-strip .k { color: var(--theme-muted); font-size:.72rem; font-weight: 800; }
     .info-strip .v { font-size:1rem; font-weight: 800; margin-top: 2px; }
@@ -563,18 +512,9 @@
     .time-box { background: var(--theme-card); border:1px solid var(--theme-border); border-radius: 12px; padding: 10px; }
     .time-box span { display:block; color: var(--theme-muted); font-size:.7rem; font-weight:800; }
     .time-box strong { display:block; margin-top: 6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-    .img-link { display:inline-block; margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--theme-cyan); color: var(--theme-bg); text-decoration:none; font-weight:900; }
-
+    .img-link, .about-link-btn { display:inline-flex; align-items:center; justify-content:center; margin-top: 14px; padding: 10px 14px; border-radius: 10px; background: var(--theme-cyan); color: var(--theme-bg); text-decoration:none; font-weight:900; border:none; cursor:pointer; }
 
     .world-times-wrap { display:flex; align-items:center; justify-content:center; gap:14px; padding: 14px; }
-    .world-times-label {
-      background: color-mix(in srgb, var(--theme-gold) 16%, var(--theme-card));
-      color: var(--theme-gold);
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid color-mix(in srgb, var(--theme-gold) 38%, var(--theme-border));
-      font-size: .72rem; font-weight: 900; letter-spacing: 1px; white-space: nowrap; text-transform: uppercase;
-    }
     .world-times-grid {
       width:100%;
       display:grid;
@@ -595,117 +535,31 @@
       box-shadow: inset 0 1px 0 color-mix(in srgb, var(--card-accent) 20%, transparent);
       transition: .18s ease;
     }
-    .world-time-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-accent) 52%, transparent), 0 8px 24px color-mix(in srgb, var(--card-accent) 16%, transparent);
-    }
-    .world-time-card.local-time-card {
-      border-color: color-mix(in srgb, var(--theme-gold) 56%, var(--theme-border));
-      background: linear-gradient(180deg, color-mix(in srgb, var(--theme-gold) 16%, var(--theme-card)), color-mix(in srgb, var(--theme-gold) 7%, var(--theme-card)));
-      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-gold) 24%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-gold) 16%, transparent);
-    }
+    .world-time-card:hover { transform: translateY(-2px); }
     .world-time-city { font-weight: 900; letter-spacing: .3px; color: var(--card-accent); }
     .world-time-sub { color: var(--theme-muted); font-size: .73rem; line-height: 1.2; }
     .world-time-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1.02rem; font-weight: 900; color: var(--theme-text); }
-    .world-time-card.local-time { border-color: color-mix(in srgb, var(--theme-gold) 55%, var(--theme-border)); background: color-mix(in srgb, var(--theme-gold) 14%, var(--theme-card)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-gold) 20%, transparent), 0 0 0 1px color-mix(in srgb, var(--theme-gold) 18%, transparent); }
-    .world-time-card.local-time .world-time-city { color: var(--theme-gold); }
-    html[data-theme="light"] .ticker-link, html[data-theme="light"] .ticker-label, html[data-theme="light"] .section-title, html[data-theme="light"] .stage-head, html[data-theme="light"] .route-next strong, html[data-theme="light"] .team-name, html[data-theme="light"] .fixture-line, html[data-theme="light"] .about-link-btn, html[data-theme="light"] .pill, html[data-theme="light"] .group-route-label { color: var(--theme-text); }
-    html[data-theme="light"] .ticker-label { color: var(--theme-pink); }
-    html[data-theme="light"] .section-title { color: var(--theme-cyan); }
-    html[data-theme="light"] .world-time-sub, html[data-theme="light"] .meta-line, html[data-theme="light"] .group-head span, html[data-theme="light"] .route-next, html[data-theme="light"] .bracket-date, html[data-theme="light"] .about-page-sub, html[data-theme="light"] .about-card p, html[data-theme="light"] .about-card li, html[data-theme="light"] .about-signoff, html[data-theme="light"] .info-strip .k, html[data-theme="light"] .time-box span, html[data-theme="light"] .sub { color: var(--theme-muted); }
-    html[data-theme="light"] .stamp { color: var(--theme-text); }
-    html[data-theme="light"] .modal-card, html[data-theme="light"] .about-page-card { color: var(--theme-text); }
 
-
-    html[data-theme="light"] body { color: var(--theme-text); }
-    html[data-theme="light"] .sub,
-    html[data-theme="light"] .stamp,
-    html[data-theme="light"] .meta-line,
-    html[data-theme="light"] .group-head span,
-    html[data-theme="light"] .group-route-head small,
-    html[data-theme="light"] .group-route-tag,
-    html[data-theme="light"] .group-route-note,
-    html[data-theme="light"] .stage-head,
-    html[data-theme="light"] .route-next,
-    html[data-theme="light"] .world-time-sub,
-    html[data-theme="light"] .info-strip .k,
-    html[data-theme="light"] .about-page-sub,
-    html[data-theme="light"] .about-copy,
-    html[data-theme="light"] .about-card p,
-    html[data-theme="light"] .about-card li,
-    html[data-theme="light"] .about-signoff,
-    html[data-theme="light"] th { color: var(--theme-muted); }
-
-    html[data-theme="light"] .ticker-link,
-    html[data-theme="light"] .fixture-line,
-    html[data-theme="light"] .team-name,
-    html[data-theme="light"] .result-row,
-    html[data-theme="light"] .world-time-value,
-    html[data-theme="light"] .info-strip .v,
-    html[data-theme="light"] .modal-card,
-    html[data-theme="light"] .modalFixture,
-    html[data-theme="light"] .about-link-btn,
-    html[data-theme="light"] .pill { color: var(--theme-text); }
-
-    html[data-theme="light"] .search {
-      color: var(--theme-text);
-      background: rgba(15, 23, 42, 0.04);
+    @media (max-width: 1460px) {
+      .diagram-layout { grid-template-columns: 1fr; }
+      .group-route-column { grid-template-columns: repeat(3, minmax(220px, 1fr)); }
     }
-    html[data-theme="light"] .search::placeholder { color: var(--theme-muted); }
-    html[data-theme="light"] .group-route-card,
-    html[data-theme="light"] .bracket-box,
-    html[data-theme="light"] .match-card,
-    html[data-theme="light"] .world-time-card,
-    html[data-theme="light"] .info-strip,
-    html[data-theme="light"] .time-box {
-      box-shadow: 0 6px 18px rgba(15,23,42,.06);
-    }
-
-
-    html[data-theme="light"] .ticker-link,
-    html[data-theme="light"] .fixture-line,
-    html[data-theme="light"] .team-name,
-    html[data-theme="light"] .world-time-value,
-    html[data-theme="light"] .section-title,
-    html[data-theme="light"] .group-head h3,
-    html[data-theme="light"] .about-title,
-    html[data-theme="light"] .about-link-btn,
-    html[data-theme="light"] .info-strip .v {
-      color: var(--theme-text);
-    }
-    html[data-theme="light"] .sub,
-    html[data-theme="light"] .stamp,
-    html[data-theme="light"] .meta-line,
-    html[data-theme="light"] .stage-head,
-    html[data-theme="light"] .route-next,
-    html[data-theme="light"] .world-time-sub,
-    html[data-theme="light"] .group-route-note,
-    html[data-theme="light"] .group-route-tag,
-    html[data-theme="light"] .about-copy,
-    html[data-theme="light"] .about-page-sub,
-    html[data-theme="light"] .about-card p,
-    html[data-theme="light"] .about-card li,
-    html[data-theme="light"] .about-signoff,
-    html[data-theme="light"] .info-strip .k,
-    html[data-theme="light"] .time-box span,
-    html[data-theme="light"] .modal-close,
-    html[data-theme="light"] .about-page-close,
-    html[data-theme="light"] .bracket-date {
-      color: var(--theme-muted);
-    }
-
     @media (max-width: 1200px) {
       .top-grid, .diagram-layout { grid-template-columns: 1fr; }
-      .group-route-grid { grid-template-columns: repeat(2, 1fr); }
       .groups-tabs { grid-template-columns: repeat(3, 1fr); }
       .world-times-grid { grid-template-columns: repeat(4, 1fr); }
       .world-times-wrap { flex-direction: column; }
     }
+    @media (max-width: 980px) {
+      .group-route-column { grid-template-columns: repeat(2, minmax(220px, 1fr)); }
+    }
+    @media (max-width: 860px) {
+      .about-grid { grid-template-columns: 1fr; }
+    }
     @media (max-width: 760px) {
-      .header { flex-direction: column; align-items:flex-start; }
-      .group-route-grid { grid-template-columns: 1fr; }
       .times { grid-template-columns: 1fr; }
       .world-times-grid { grid-template-columns: repeat(2, 1fr); }
+      .group-route-column { grid-template-columns: 1fr; }
     }
     @media print {
       body {
@@ -766,6 +620,7 @@
       <section class="panel map-box">
         <div class="panel-body" style="height:100%; display:flex; flex-direction:column;">
           <div class="section-title">Geo country + active venue map</div>
+          <div class="map-status" id="geoMapStatus">COUNTRY-FILL LINK READY • hover any match, team row, or route entry</div>
           <div id="geoMap"></div>
         </div>
       </section>
@@ -838,18 +693,10 @@
             <div class="bracket-canvas-wrap">
               <div id="bracketCanvas">
                 <svg id="bracketSvg"><defs>
-                  <marker id="routeArrowCyan" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff"></path>
-                  </marker>
-                  <marker id="routeArrowPink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff0055"></path>
-                  </marker>
-                  <marker id="routeArrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#ffaa00"></path>
-                  </marker>
-                  <marker id="routeArrowPurple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#b600ff"></path>
-                  </marker>
+                  <marker id="routeArrowCyan" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#00f0ff"></path></marker>
+                  <marker id="routeArrowPink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ff0055"></path></marker>
+                  <marker id="routeArrowOrange" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ffaa00"></path></marker>
+                  <marker id="routeArrowPurple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#b600ff"></path></marker>
                 </defs></svg>
               </div>
             </div>
@@ -866,12 +713,10 @@
       </div>
     </section>
 
-    <section class="panel footer-about">
-      <div class="panel-body">
-        <div class="about-actions about-actions-inline about-actions-footer" style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
-          <button class="about-link-btn" id="openAboutBottom" type="button">Open About page</button>
-          <div style="color: var(--theme-muted); font-size: .86rem; font-weight: 700;">Created and developed by Nawa Rezk</div>
-        </div>
+    <section class="panel">
+      <div class="panel-body" style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+        <button class="about-link-btn" id="openAboutBottom" type="button">Open About page</button>
+        <div style="color: var(--theme-muted); font-size: .86rem; font-weight: 700;">Created and developed by Nawa Rezk</div>
       </div>
     </section>
   </div>
@@ -944,15 +789,8 @@
         <button class="modal-close" id="closeModal" type="button">×</button>
       </div>
       <h3 id="modalFixture" style="font-size:1.45rem; font-weight:900; margin-bottom:12px;">Fixture</h3>
-      <div class="info-strip">
-        <div class="k">Kickoff timeline</div>
-        <div class="v" id="modalDate">-</div>
-      </div>
-      <div class="info-strip" style="border-left-color: var(--theme-cyan);">
-        <div class="k">Venue profile</div>
-        <div class="v" id="modalVenue">-</div>
-        <div id="modalVenueDetails" style="margin-top:8px; color:var(--theme-muted); font-size:.84rem; line-height:1.45;">-</div>
-      </div>
+      <div class="info-strip"><div class="k">Kickoff timeline</div><div class="v" id="modalDate">-</div></div>
+      <div class="info-strip" style="border-left-color: var(--theme-cyan);"><div class="k">Venue profile</div><div class="v" id="modalVenue">-</div><div id="modalVenueDetails" style="margin-top:8px; color:var(--theme-muted); font-size:.84rem; line-height:1.45;">-</div></div>
       <div class="times">
         <div class="time-box"><span>LOCAL</span><strong id="modalTimeLocal">-</strong></div>
         <div class="time-box"><span>EUROPE CEST</span><strong id="modalTimeCest">-</strong></div>
@@ -963,12 +801,12 @@
   </div>
 
   <script>
+    const COUNTRY_TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
     const NEWS_LINKS = [
       { label: 'FIFA • One Year to Go until the FIFA World Cup 26™', url: 'https://inside.fifa.com/organisation/media-releases/fifa-celebrates-one-year-to-go-until-the-fifa-world-cup-26' },
       { label: 'MSN • Where to watch FIFA World Cup 2026 - live streams & schedule', url: 'https://www.msn.com/en-us/sports/other/where-to-watch-fifa-world-cup-2026-live-streams-schedule/ar-AA25axxO' },
       { label: 'MSN • Format changes and new regulations set for expanded 2026 FIFA World Cup', url: 'https://www.msn.com/en-us/sports/fifa_world_cup/format-changes-and-new-regulations-set-for-expanded-2026-fifa-world-cup/ar-AA256iQP' }
     ];
-
 
     const WORLD_TIME_CITIES = [
       { label: 'Paris', sub: 'France', zone: 'Europe/Paris', query: 'Paris world clock time difference', color: '#7c3aed' },
@@ -983,37 +821,6 @@
       { label: 'Buenos Aires', sub: 'Argentina', zone: 'America/Argentina/Buenos_Aires', query: 'Buenos Aires Argentina world clock time difference', color: '#ca8a04' },
       { label: 'Bogotá', sub: 'Colombia', zone: 'America/Bogota', query: 'Bogota Colombia world clock time difference', color: '#dc2626' }
     ];
-
-    function renderWorldTimes() {
-      const root = document.getElementById('worldTimesGrid');
-      if (!root) return;
-      root.innerHTML = '';
-      WORLD_TIME_CITIES.forEach((city, idx) => {
-        const a = document.createElement('a');
-        a.className = `world-time-card${city.local ? ' local-time' : ''}`;
-        a.href = `https://www.google.com/search?q=${encodeURIComponent(city.query)}`;
-        a.target = '_blank';
-        a.rel = 'noopener noreferrer';
-        a.style.setProperty('--card-accent', city.color);
-        a.innerHTML = `
-          <div class="world-time-city">${city.label}</div>
-          <div class="world-time-sub">${city.sub}</div>
-          <div class="world-time-value" id="worldTimeValue-${idx}">--:--:--</div>`;
-        root.appendChild(a);
-      });
-      updateWorldTimes();
-    }
-
-    function updateWorldTimes() {
-      WORLD_TIME_CITIES.forEach((city, idx) => {
-        const el = document.getElementById(`worldTimeValue-${idx}`);
-        if (!el) return;
-        const value = city.local
-          ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date())
-          : new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: city.zone }).format(new Date());
-        el.textContent = value;
-      });
-    }
 
     const VENUES = {
       'Mexico City Stadium': { name: 'Mexico City Stadium', search: 'Mexico City Stadium World Cup 2026', coord: [19.3030, -99.1505], city: 'Mexico City', cap: '87,523', info: 'Opening-match venue in Mexico City.' },
@@ -1049,6 +856,57 @@
       'Jordan':[30.5852,36.2384],'Portugal':[39.3999,-8.2245],'DR Congo':[-4.0383,21.7587],'Uzbekistan':[41.3775,64.5853],
       'England':[52.3555,-1.1743],'Croatia':[45.1,15.2],'Ghana':[7.9465,-1.0232],'Panama':[8.538,-80.7821],
       'Colombia':[4.5709,-74.2973], 'World Cup winner': [0,0], 'World Cup runner-up':[0,0]
+    };
+
+    const COUNTRY_GEO_ALIASES = {
+      'mexico': ['Mexico'],
+      'south africa': ['South Africa'],
+      'south korea': ['South Korea', 'Korea, Republic of', 'Republic of Korea'],
+      'czechia': ['Czechia', 'Czech Republic'],
+      'canada': ['Canada'],
+      'bosnia & herzegovina': ['Bosnia and Herzegovina', 'Bosnia & Herzegovina', 'Bosnia and Herz.'],
+      'usa': ['United States of America', 'United States', 'USA'],
+      'paraguay': ['Paraguay'],
+      'qatar': ['Qatar'],
+      'switzerland': ['Switzerland'],
+      'brazil': ['Brazil'],
+      'morocco': ['Morocco'],
+      'haiti': ['Haiti'],
+      'scotland': ['Scotland'],
+      'australia': ['Australia'],
+      'turkiye': ['Turkey', 'Türkiye', 'Turkiye'],
+      'germany': ['Germany'],
+      'curacao': ['Curaçao', 'Curacao'],
+      'netherlands': ['Netherlands'],
+      'japan': ['Japan'],
+      'ivory coast': ['Côte d\'Ivoire', 'Ivory Coast'],
+      'ecuador': ['Ecuador'],
+      'sweden': ['Sweden'],
+      'tunisia': ['Tunisia'],
+      'spain': ['Spain'],
+      'cape verde': ['Cabo Verde', 'Cape Verde'],
+      'belgium': ['Belgium'],
+      'egypt': ['Egypt'],
+      'saudi arabia': ['Saudi Arabia'],
+      'uruguay': ['Uruguay'],
+      'iran': ['Iran', 'Iran, Islamic Republic of'],
+      'new zealand': ['New Zealand'],
+      'france': ['France'],
+      'senegal': ['Senegal'],
+      'iraq': ['Iraq'],
+      'norway': ['Norway'],
+      'argentina': ['Argentina'],
+      'algeria': ['Algeria'],
+      'austria': ['Austria'],
+      'jordan': ['Jordan'],
+      'portugal': ['Portugal'],
+      'dr congo': ['Democratic Republic of the Congo', 'Dem. Rep. Congo', 'DR Congo'],
+      'uzbekistan': ['Uzbekistan'],
+      'england': ['England'],
+      'croatia': ['Croatia'],
+      'ghana': ['Ghana'],
+      'panama': ['Panama'],
+      'colombia': ['Colombia']
     };
 
     const GROUP_COLORS = {
@@ -1404,6 +1262,20 @@ Sunday, July 19
 World Cup winner vs World Cup runner-up
 Final New York New Jersey Stadium`;
 
+    function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+    function groupColor(letter) { return cssVar(`--group-${letter}`); }
+    function updateGeoStatus(text) { const el = document.getElementById('geoMapStatus'); if (el) el.textContent = text; }
+
+    function normalizeCountryKey(value) {
+      return String(value || '')
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9]+/gi, ' ')
+        .trim()
+        .toLowerCase();
+    }
+
     function parseSide(side) {
       const m = String(side).trim().match(/^(\S+)\s+(.+)$/);
       return m ? { flag: m[1], name: m[2] } : { flag: '', name: String(side).trim() };
@@ -1427,42 +1299,24 @@ Final New York New Jersey Stadium`;
           const [homeRaw, awayRaw] = fixture.split(/\s+vs\s+/);
           const home = parseSide(homeRaw);
           const away = parseSide(awayRaw);
-          const record = {
-            date: currentDate,
-            time: currentTime,
-            homeFlag: home.flag,
-            home: home.name,
-            awayFlag: away.flag,
-            away: away.name,
-            fixture,
-            detail,
-            stage: '',
-            group: '',
-            venue: ''
-          };
+          const record = { date: currentDate, time: currentTime, homeFlag: home.flag, home: home.name, awayFlag: away.flag, away: away.name, fixture, detail, stage: '', group: '', venue: '' };
           if (detail.startsWith('Group ')) {
             const gm = detail.match(/^Group\s+([A-L])\s+(.+)$/);
             record.stage = 'Group stage';
             record.group = gm ? gm[1] : '';
             record.venue = gm ? gm[2] : detail.replace(/^Group\s+[A-L]\s+/, '');
           } else if (detail.startsWith('Round of 32 ')) {
-            record.stage = 'Round of 32';
-            record.venue = detail.replace('Round of 32 ', '');
+            record.stage = 'Round of 32'; record.venue = detail.replace('Round of 32 ', '');
           } else if (detail.startsWith('Round of 16 ')) {
-            record.stage = 'Round of 16';
-            record.venue = detail.replace('Round of 16 ', '');
+            record.stage = 'Round of 16'; record.venue = detail.replace('Round of 16 ', '');
           } else if (detail.startsWith('Quarterfinals ')) {
-            record.stage = 'Quarterfinals';
-            record.venue = detail.replace('Quarterfinals ', '');
+            record.stage = 'Quarterfinals'; record.venue = detail.replace('Quarterfinals ', '');
           } else if (detail.startsWith('Semifinals ')) {
-            record.stage = 'Semifinals';
-            record.venue = detail.replace('Semifinals ', '');
+            record.stage = 'Semifinals'; record.venue = detail.replace('Semifinals ', '');
           } else if (detail.startsWith('Third place ')) {
-            record.stage = 'Third place';
-            record.venue = detail.replace('Third place ', '');
+            record.stage = 'Third place'; record.venue = detail.replace('Third place ', '');
           } else if (detail.startsWith('Final ')) {
-            record.stage = 'Final';
-            record.venue = detail.replace('Final ', '');
+            record.stage = 'Final'; record.venue = detail.replace('Final ', '');
           }
           matches.push(record);
         }
@@ -1470,18 +1324,25 @@ Final New York New Jersey Stadium`;
       return matches;
     }
 
-    const ALL_MATCHES = parseSchedule(SCHEDULE_TEXT);
+    const ENGLAND_FLAG = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}';
+    const SCOTLAND_FLAG = '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}';
+    const TEAM_FLAG_OVERRIDES = {
+      'England': ENGLAND_FLAG,
+      'Scotland': SCOTLAND_FLAG
+    };
+
+    const ALL_MATCHES = parseSchedule(SCHEDULE_TEXT).map(m => ({
+      ...m,
+      homeFlag: TEAM_FLAG_OVERRIDES[m.home] || m.homeFlag,
+      awayFlag: TEAM_FLAG_OVERRIDES[m.away] || m.awayFlag
+    }));
     const GROUP_MATCHES = ALL_MATCHES.filter(m => m.stage === 'Group stage');
     const KNOCKOUT_MATCHES = ALL_MATCHES.filter(m => m.stage !== 'Group stage');
 
     function assignKnockoutIds(matches) {
       let n = 73;
-      const ordered = ['Round of 32','Round of 16','Quarterfinals','Semifinals','Third place','Final'];
-      ordered.forEach(stage => {
-        matches.filter(m => m.stage === stage).forEach(m => {
-          m.matchId = `M${n}`;
-          n += 1;
-        });
+      ['Round of 32','Round of 16','Quarterfinals','Semifinals','Third place','Final'].forEach(stage => {
+        matches.filter(m => m.stage === stage).forEach(m => { m.matchId = `M${n}`; n += 1; });
       });
       const third = matches.find(m => m.stage === 'Third place');
       const final = matches.find(m => m.stage === 'Final');
@@ -1510,9 +1371,6 @@ Final New York New Jersey Stadium`;
     }
     const KNOCKOUT_BY_ID = attachPaths(KNOCKOUT_MATCHES);
 
-    const LIVE_RESULTS = window.WC26_RESULTS || {};
-    KNOCKOUT_MATCHES.forEach(m => Object.assign(m, LIVE_RESULTS[m.matchId] || {}));
-
     const GROUPS = {};
     GROUP_MATCHES.forEach(m => {
       if (!GROUPS[m.group]) GROUPS[m.group] = { teams: new Map(), fixtures: [] };
@@ -1526,9 +1384,229 @@ Final New York New Jersey Stadium`;
     let stadiumMap = null;
     let geoLayers = [];
     let stadiumLayers = [];
+    let countryLayer = null;
+    let countryLayerReady = null;
+    let countryFeatureIndex = new Map();
+    let countryHighlightLayers = [];
 
-    function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
-    function groupColor(letter) { return cssVar(`--group-${letter}`); }
+    function featureNameCandidates(feature) {
+      const props = feature?.properties || {};
+      return [
+        props.ADMIN, props.admin, props.name, props.NAME, props.NAME_EN, props.sovereignt, props.SOVEREIGNT,
+        props.BRK_NAME, props.formal_en, props.geounit, props.COUNTRY, props.country
+      ].filter(Boolean);
+    }
+
+    function indexFeatureLayer(layer, feature) {
+      const names = featureNameCandidates(feature);
+      names.forEach(name => {
+        const key = normalizeCountryKey(name);
+        if (!countryFeatureIndex.has(key)) countryFeatureIndex.set(key, []);
+        countryFeatureIndex.get(key).push(layer);
+      });
+    }
+
+    function baseCountryStyle() {
+      return {
+        color: cssVar('--map-stroke-soft') || '#00f0ff',
+        weight: 1.2,
+        opacity: 0.75,
+        fillColor: cssVar('--map-fill-soft') || '#00f0ff',
+        fillOpacity: 0.12
+      };
+    }
+
+    function highlightCountryStyle(color) {
+      return {
+        color,
+        weight: 2.8,
+        opacity: 1,
+        fillColor: color,
+        fillOpacity: 0.42
+      };
+    }
+
+    async function ensureCountryLayer() {
+      if (countryLayer) return countryLayer;
+      if (countryLayerReady) return countryLayerReady;
+      countryLayerReady = fetch(COUNTRY_TOPOJSON_URL)
+        .then(resp => resp.json())
+        .then(data => {
+          if (!window.topojson || !data?.objects?.countries) throw new Error('TopoJSON country dataset unavailable');
+          const features = window.topojson.feature(data, data.objects.countries).features;
+          countryFeatureIndex = new Map();
+          countryLayer = L.geoJSON(features, {
+            style: baseCountryStyle,
+            interactive: false,
+            onEachFeature: (feature, layer) => indexFeatureLayer(layer, feature)
+          }).addTo(geoMap);
+          updateGeoStatus('COUNTRY-FILL LINK READY • hover any match, team row, or route entry');
+          return countryLayer;
+        })
+        .catch(err => {
+          console.error('Country boundary layer failed to load', err);
+          updateGeoStatus('BOUNDARY FILL UNAVAILABLE • marker fallback active');
+          return null;
+        });
+      return countryLayerReady;
+    }
+
+    function getCountryLayers(teamName) {
+      const directKey = normalizeCountryKey(teamName);
+      const candidates = COUNTRY_GEO_ALIASES[directKey] || [teamName];
+      const matched = [];
+      candidates.forEach(name => {
+        const key = normalizeCountryKey(name);
+        const layers = countryFeatureIndex.get(key) || [];
+        layers.forEach(layer => { if (!matched.includes(layer)) matched.push(layer); });
+      });
+      return matched;
+    }
+
+    function clearLayers(arr, map) { while (arr.length) map.removeLayer(arr.pop()); }
+    function clearMapHighlights() {
+      if (countryLayer) countryHighlightLayers.forEach(layer => countryLayer.resetStyle(layer));
+      countryHighlightLayers = [];
+      if (geoMap) clearLayers(geoLayers, geoMap);
+      if (stadiumMap) clearLayers(stadiumLayers, stadiumMap);
+      updateGeoStatus(countryLayer ? 'COUNTRY-FILL LINK READY • hover any match, team row, or route entry' : 'BOUNDARY FILL UNAVAILABLE • marker fallback active');
+    }
+
+    function haversineKm(a, b) {
+      const toRad = d => d * Math.PI / 180;
+      const R = 6371;
+      const dLat = toRad(b[0] - a[0]);
+      const dLng = toRad(b[1] - a[1]);
+      const lat1 = toRad(a[0]);
+      const lat2 = toRad(b[0]);
+      const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    function kmToFeet(km) { return km * 3280.84; }
+    function formatDistancePair(a, b) {
+      const km = haversineKm(a, b);
+      const feet = kmToFeet(km);
+      return `${km.toLocaleString(undefined, { maximumFractionDigits: 0 })} km • ${feet.toLocaleString(undefined, { maximumFractionDigits: 0 })} ft`;
+    }
+    function addCountryCircle(map, coords, color, label, store) {
+      if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) return;
+      const circle = L.circle(coords, { radius: 620000, color, weight: 3, fillColor: color, fillOpacity: .18 }).addTo(map);
+      circle.bindTooltip(label, { direction:'top', opacity:.96 });
+      store.push(circle);
+      return circle;
+    }
+    function addRouteLine(map, fromCoords, toCoords, color, label, store, dashed = false) {
+      if (!fromCoords || !toCoords) return;
+      const line = L.polyline([fromCoords, toCoords], { color, weight: 3, opacity: 0.9, dashArray: dashed ? '8 8' : null }).addTo(map);
+      if (label) line.bindTooltip(label, { sticky: true, opacity: 0.96 });
+      store.push(line);
+      return line;
+    }
+
+    async function highlightCountries(countryNames, match = null) {
+      clearMapHighlights();
+      await ensureCountryLayer();
+      const bounds = [];
+      const foundNames = [];
+      const colors = [cssVar('--theme-green') || '#00ff88', cssVar('--theme-orange') || '#ffaa00'];
+      countryNames.filter(Boolean).forEach((country, idx) => {
+        const color = colors[idx % colors.length];
+        const layers = getCountryLayers(country);
+        if (layers.length) {
+          layers.forEach(layer => {
+            layer.setStyle(highlightCountryStyle(color));
+            countryHighlightLayers.push(layer);
+            const b = layer.getBounds?.();
+            if (b?.isValid()) bounds.push(b);
+          });
+          foundNames.push(country);
+        } else {
+          const coords = COUNTRY_COORDS[country];
+          if (coords && geoMap) {
+            addCountryCircle(geoMap, coords, color, country, geoLayers);
+            bounds.push(L.latLngBounds([coords, coords]));
+            foundNames.push(country);
+          }
+        }
+      });
+
+      const venue = match ? VENUES[match.venue] : null;
+      if (match && geoMap) {
+        const homeCoords = COUNTRY_COORDS[match.home];
+        const awayCoords = COUNTRY_COORDS[match.away];
+        if (venue) {
+          const marker = L.circleMarker(venue.coord, { radius: 9, color:'#fff', weight:1.5, fillColor: cssVar('--theme-pink'), fillOpacity: .95 }).addTo(geoMap);
+          marker.bindPopup(`<b>${venue.name}</b><br><small>${match.home} vs ${match.away}</small>`).openPopup();
+          geoLayers.push(marker);
+          bounds.push(L.latLngBounds([venue.coord, venue.coord]));
+        }
+        if (homeCoords && venue) addRouteLine(geoMap, homeCoords, venue.coord, cssVar('--theme-green'), `${match.home} → ${venue.name}<br>${formatDistancePair(homeCoords, venue.coord)}`, geoLayers, false);
+        if (awayCoords && venue) addRouteLine(geoMap, awayCoords, venue.coord, cssVar('--theme-orange'), `${match.away} → ${venue.name}<br>${formatDistancePair(awayCoords, venue.coord)}`, geoLayers, false);
+      }
+
+      if (stadiumMap) {
+        if (match && venue) {
+          const marker = L.circleMarker(venue.coord, { radius: 10, color:'#fff', weight:1.6, fillColor: cssVar('--theme-cyan'), fillOpacity: .95 }).addTo(stadiumMap);
+          marker.bindPopup(`<b>${venue.name}</b><br><small>${match.date} • ${match.time}</small>`).openPopup();
+          stadiumLayers.push(marker);
+          const stadiumBounds = [venue.coord];
+          const homeCoords = COUNTRY_COORDS[match.home];
+          const awayCoords = COUNTRY_COORDS[match.away];
+          if (homeCoords) {
+            addRouteLine(stadiumMap, homeCoords, venue.coord, cssVar('--theme-green'), `${match.home} → ${venue.name}<br>${formatDistancePair(homeCoords, venue.coord)}`, stadiumLayers, false);
+            stadiumBounds.push(homeCoords);
+          }
+          if (awayCoords) {
+            addRouteLine(stadiumMap, awayCoords, venue.coord, cssVar('--theme-orange'), `${match.away} → ${venue.name}<br>${formatDistancePair(awayCoords, venue.coord)}`, stadiumLayers, false);
+            stadiumBounds.push(awayCoords);
+          }
+          stadiumMap.fitBounds(L.latLngBounds(stadiumBounds), { padding: [32, 32], maxZoom: 4 });
+        } else {
+          stadiumMap.fitWorld({ padding: [18, 18] });
+        }
+      }
+
+      if (geoMap) {
+        if (bounds.length) {
+          const merged = bounds.reduce((acc, b) => acc.extend(b), bounds[0]);
+          geoMap.fitBounds(merged, { padding: [36, 36], maxZoom: 4 });
+        } else {
+          geoMap.fitWorld({ padding: [20, 20] });
+        }
+      }
+      if (foundNames.length) {
+        updateGeoStatus(`COUNTRY-FILL ACTIVE • ${foundNames.join(' • ')}`);
+      }
+    }
+
+    function focusMatch(match) { highlightCountries([match.home, match.away], match); }
+    function focusCountry(country) { highlightCountries([country]); }
+
+    function renderWorldTimes() {
+      const root = document.getElementById('worldTimesGrid');
+      root.innerHTML = '';
+      WORLD_TIME_CITIES.forEach((city, idx) => {
+        const a = document.createElement('a');
+        a.className = 'world-time-card';
+        a.href = `https://www.google.com/search?q=${encodeURIComponent(city.query)}`;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.style.setProperty('--card-accent', city.color);
+        a.innerHTML = `<div class="world-time-city">${city.label}</div><div class="world-time-sub">${city.sub}</div><div class="world-time-value" id="worldTimeValue-${idx}">--:--:--</div>`;
+        root.appendChild(a);
+      });
+      updateWorldTimes();
+    }
+    function updateWorldTimes() {
+      WORLD_TIME_CITIES.forEach((city, idx) => {
+        const el = document.getElementById(`worldTimeValue-${idx}`);
+        if (!el) return;
+        const value = city.local
+          ? new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date())
+          : new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: city.zone }).format(new Date());
+        el.textContent = value;
+      });
+    }
 
     function initTicker() {
       const track = document.getElementById('tickerTrack');
@@ -1543,47 +1621,8 @@ Final New York New Jersey Stadium`;
       });
     }
 
-    function setClock() {
-      document.getElementById('syncNode').textContent = `SYNC: ONLINE • ${new Date().toLocaleString()}`;
-    }
-
-    function upcomingMatches() {
-      return ALL_MATCHES.slice(0, 8);
-    }
-
-    function renderUpcoming() {
-      const root = document.getElementById('upcomingList');
-      root.innerHTML = '';
-      upcomingMatches().forEach((m, i) => {
-        const card = document.createElement('div');
-        card.className = 'match-card';
-        const dayNum = m.date.split(' ').pop();
-        const month = m.date.split(', ')[1].split(' ')[0].slice(0,3).toUpperCase();
-        const action = getScheduleActionState(m);
-        const localKickoff = formatMatchLocalDateTime(m);
-        card.innerHTML = `
-          <div class="date-badge"><small>${month}</small><strong>${dayNum}</strong></div>
-          <div>
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
-              <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()}</div>
-              <button type="button" id="upcoming-action-${i}" class="schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}" ${action.interactive ? '' : 'disabled'} data-watch="${i}">${action.label}</button>
-            </div>
-            <div class="fixture-line">${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</div>
-            <div class="local-kickoff-line">KICKOFF TIME • ${localKickoff}</div>
-          </div>`;
-        const watchBtn = card.querySelector('[data-watch]');
-        if (watchBtn && action.interactive) {
-          watchBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer');
-          });
-        }
-        card.addEventListener('mouseenter', () => focusMatch(m));
-        card.addEventListener('mouseleave', clearMapHighlights);
-        card.addEventListener('click', () => openModal(m));
-        root.appendChild(card);
-      });
-    }
+    function setClock() { document.getElementById('syncNode').textContent = `SYNC: ONLINE • ${new Date().toLocaleString()}`; }
+    function upcomingMatches() { return ALL_MATCHES.slice(0, 8); }
 
     function parseMatchDateTime(match) {
       const dateMatch = String(match.date || '').match(/^[A-Za-z]+,\s+([A-Za-z]+)\s+(\d{1,2})$/);
@@ -1595,11 +1634,9 @@ Final New York New Jersey Stadium`;
       if (month == null || !timeMatch) return null;
       let hour = Number(timeMatch[1]) % 12;
       const minute = Number(timeMatch[2]);
-      const meridiem = timeMatch[3].toUpperCase();
-      if (meridiem === 'PM') hour += 12;
+      if (timeMatch[3].toUpperCase() === 'PM') hour += 12;
       return new Date(2026, month, day, hour, minute, 0, 0);
     }
-
     function formatShortCountdown(ms) {
       const totalSeconds = Math.max(0, Math.floor(ms / 1000));
       const days = Math.floor(totalSeconds / 86400);
@@ -1610,48 +1647,57 @@ Final New York New Jersey Stadium`;
       if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
       return `${minutes}m ${seconds}s`;
     }
-
     function formatMatchLocalDateTime(match) {
       const start = parseMatchDateTime(match);
       if (!start) return `${match.date} • ${match.time}`;
-      return new Intl.DateTimeFormat(undefined, {
-        weekday: 'short',
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      }).format(start);
+      return new Intl.DateTimeFormat(undefined, { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }).format(start);
     }
-
     function getScheduleActionState(match) {
       const start = parseMatchDateTime(match);
       if (!start) return { type: 'none', label: `SCHEDULED • ${match.time}`, interactive: false };
       const now = new Date();
       const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
       const isToday = now.getFullYear() === start.getFullYear() && now.getMonth() === start.getMonth() && now.getDate() === start.getDate();
-      if (now >= start && now <= end) {
-        return { type: 'live', label: 'LIVE NOW', interactive: true };
-      }
-      if (isToday && now < start) {
-        return { type: 'today', label: `TODAY • ${formatShortCountdown(start - now)}`, interactive: true };
-      }
+      if (now >= start && now <= end) return { type: 'live', label: 'LIVE NOW', interactive: true };
+      if (isToday && now < start) return { type: 'today', label: `TODAY • ${formatShortCountdown(start - now)}`, interactive: true };
       return { type: 'none', label: `SCHEDULED • ${match.time}`, interactive: false };
     }
+    function buildWatchUrl(match) { return `https://www.google.com/search?q=${encodeURIComponent(`where to watch world cup ${match.home} vs ${match.away}`)}`; }
 
-    function buildWatchUrl(match) {
-      return `https://www.google.com/search?q=${encodeURIComponent(`where to watch world cup ${match.home} vs ${match.away}`)}`;
+    function renderUpcoming() {
+      const root = document.getElementById('upcomingList');
+      root.innerHTML = '';
+      upcomingMatches().forEach((m, i) => {
+        const card = document.createElement('div');
+        card.className = 'match-card';
+        const dayNum = m.date.split(' ').pop();
+        const month = m.date.split(', ')[1].split(' ')[0].slice(0,3).toUpperCase();
+        const action = getScheduleActionState(m);
+        card.innerHTML = `
+          <div class="date-badge"><small>${month}</small><strong>${dayNum}</strong></div>
+          <div>
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+              <div class="meta-line">${m.stage === 'Group stage' ? `GROUP ${m.group}` : m.stage.toUpperCase()}</div>
+              <button type="button" id="upcoming-action-${i}" class="schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}" ${action.interactive ? '' : 'disabled'} data-watch="${i}">${action.label}</button>
+            </div>
+            <div class="fixture-line">${m.homeFlag} ${m.home} vs ${m.away} ${m.awayFlag}</div>
+            <div class="local-kickoff-line">KICKOFF TIME • ${formatMatchLocalDateTime(m)}</div>
+          </div>`;
+        const watchBtn = card.querySelector('[data-watch]');
+        if (watchBtn && action.interactive) watchBtn.addEventListener('click', e => { e.stopPropagation(); window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer'); });
+        card.addEventListener('mouseenter', () => focusMatch(m));
+        card.addEventListener('mouseleave', clearMapHighlights);
+        card.addEventListener('click', () => openModal(m));
+        root.appendChild(card);
+      });
     }
 
     function renderScheduleTable() {
       const body = document.getElementById('scheduleBody');
       body.innerHTML = '';
       const stagePalette = {
-        'Round of 32': cssVar('--theme-cyan'),
-        'Round of 16': cssVar('--theme-pink'),
-        'Quarterfinals': cssVar('--theme-orange'),
-        'Semifinals': cssVar('--theme-purple'),
-        'Third place': cssVar('--theme-green'),
-        'Final': cssVar('--theme-gold')
+        'Round of 32': cssVar('--theme-cyan'), 'Round of 16': cssVar('--theme-pink'), 'Quarterfinals': cssVar('--theme-orange'),
+        'Semifinals': cssVar('--theme-purple'), 'Third place': cssVar('--theme-green'), 'Final': cssVar('--theme-gold')
       };
       ALL_MATCHES.forEach(m => {
         const tr = document.createElement('tr');
@@ -1665,14 +1711,8 @@ Final New York New Jersey Stadium`;
         btn.type = 'button';
         btn.className = `schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}`;
         btn.textContent = action.label;
-        if (action.interactive) {
-          btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer');
-          });
-        } else {
-          btn.disabled = true;
-        }
+        if (action.interactive) btn.addEventListener('click', e => { e.stopPropagation(); window.open(buildWatchUrl(m), '_blank', 'noopener,noreferrer'); });
+        else btn.disabled = true;
         actionCell.appendChild(btn);
         tr.addEventListener('mouseenter', () => focusMatch(m));
         tr.addEventListener('mouseleave', clearMapHighlights);
@@ -1683,6 +1723,7 @@ Final New York New Jersey Stadium`;
 
     function renderGroupTabs() {
       const tabs = document.getElementById('groupTabs');
+      tabs.innerHTML = '';
       Object.keys(GROUPS).sort().forEach(letter => {
         const btn = document.createElement('button');
         btn.className = 'group-tab';
@@ -1697,8 +1738,7 @@ Final New York New Jersey Stadium`;
 
     function renderGroup(letter) {
       activeGroup = letter;
-      const tabs = document.querySelectorAll('.group-tab');
-      tabs.forEach((tab, idx) => tab.classList.toggle('active', String.fromCharCode(65 + idx) === letter));
+      document.querySelectorAll('.group-tab').forEach((tab, idx) => tab.classList.toggle('active', String.fromCharCode(65 + idx) === letter));
       const data = GROUPS[letter];
       const color = groupColor(letter);
       document.getElementById('groupPanel').style.setProperty('--active-group', color);
@@ -1708,8 +1748,10 @@ Final New York New Jersey Stadium`;
       body.innerHTML = '';
       Array.from(data.teams.entries()).forEach(([team, flag], idx) => {
         const tr = document.createElement('tr');
-        if (idx < 2) tr.className = 'qualified';
+        tr.className = `group-team-row${idx < 2 ? ' qualified' : ''}`;
         tr.innerHTML = `<td>[0${idx+1}]</td><td><span class="flag">${flag}</span>${team}</td><td>0</td><td>0</td><td>0</td><td style="font-weight:900; color:${color};">0</td>`;
+        tr.addEventListener('mouseenter', () => focusCountry(team));
+        tr.addEventListener('mouseleave', clearMapHighlights);
         body.appendChild(tr);
       });
     }
@@ -1717,14 +1759,10 @@ Final New York New Jersey Stadium`;
     function renderGroupRoutes() {
       const left = document.getElementById('groupRouteLeft');
       const right = document.getElementById('groupRouteRight');
-      if (!left || !right) return;
       left.innerHTML = '';
       right.innerHTML = '';
       const letters = Object.keys(GROUPS).sort();
-      const leftLetters = letters.slice(0, 6);
-      const rightLetters = letters.slice(6);
-
-      [[left, leftLetters], [right, rightLetters]].forEach(([target, subset]) => {
+      [[left, letters.slice(0, 6)], [right, letters.slice(6)]].forEach(([target, subset]) => {
         subset.forEach(letter => {
           const data = GROUPS[letter];
           const color = groupColor(letter);
@@ -1733,24 +1771,20 @@ Final New York New Jersey Stadium`;
           card.style.setProperty('--group-color', color);
           card.dataset.search = `group ${letter} ${Array.from(data.teams.keys()).join(' ')} ${data.fixtures.map(f => f.venue).join(' ')}`.toLowerCase();
           card.innerHTML = `<div class="group-route-head"><span>Group ${letter}</span><small>${data.fixtures.length} fixtures</small></div>`;
-
           const teamList = document.createElement('div');
           teamList.className = 'group-route-team-list';
           Array.from(data.teams.entries()).forEach(([team, flag], idx) => {
             const row = document.createElement('div');
             row.className = 'group-route-team';
-            row.innerHTML = `
-              <span class="group-route-rank">${idx + 1}</span>
-              <span class="group-route-label">${flag} ${team}</span>
-              <span class="group-route-tag">G${letter}</span>`;
+            row.innerHTML = `<span class="group-route-rank">${idx + 1}</span><span class="group-route-label">${flag} ${team}</span><span class="group-route-tag">G${letter}</span>`;
+            row.addEventListener('mouseenter', () => focusCountry(team));
+            row.addEventListener('mouseleave', clearMapHighlights);
             teamList.appendChild(row);
           });
-
           const venues = [...new Set(data.fixtures.map(f => f.venue))].slice(0, 3).join(' • ');
           const note = document.createElement('div');
           note.className = 'group-route-note';
           note.textContent = venues || 'Group route';
-
           card.appendChild(teamList);
           card.appendChild(note);
           target.appendChild(card);
@@ -1766,12 +1800,10 @@ Final New York New Jersey Stadium`;
       if (stage === 'Third place') return 'stage-third';
       return 'stage-final';
     }
-
     function teamRefGroup(name) {
       const m = /([A-L])$/.exec(String(name || '').replace(/Runner-up\s+/, '').replace(/Winner\s+/, '').trim());
       return m ? m[1] : null;
     }
-
     function resolveKnockoutRef(ref) {
       const value = String(ref || '');
       let m = /Winner\s+(M\d+)/i.exec(value);
@@ -1780,42 +1812,27 @@ Final New York New Jersey Stadium`;
       if (m && KNOCKOUT_BY_ID[m[1]]?.loser) return { name: KNOCKOUT_BY_ID[m[1]].loser, from: m[1] };
       return { name: value };
     }
-
     function teamStateForMatch(match, teamName) {
       if (!teamName) return '';
       if (match.winner && match.winner === teamName) return 'is-winner';
       if (match.loser && match.loser === teamName) return 'is-eliminated';
       return '';
     }
-
     function shortRouteDate(match) {
       if (!match) return '';
       const month = String(match.date || '').split(', ')[1]?.split(' ')[0] || '';
       const day = String(match.date || '').split(' ').pop() || '';
       return `${month.slice(0,3)} ${day} • ${match.time}`;
     }
-
     function renderTeamRow(name, flag, seed, preferredGroup, state='') {
       const resolved = resolveKnockoutRef(name);
       const displayName = resolved.name || name;
       const grp = preferredGroup || teamRefGroup(seed || displayName) || null;
       const chipColor = grp ? groupColor(grp) : cssVar('--theme-cyan');
-      return `
-        <div class="team-row ${state}">
-          <span class="group-chip" style="--chip:${chipColor}">${grp ? `G${grp}` : '→'}</span>
-          <span class="team-name">${flag ? flag + ' ' : ''}${displayName}</span>
-          <span class="seed">${seed || ''}</span>
-          <span class="winner-mark">${state === 'is-winner' ? 'ADV' : ''}</span>
-        </div>`;
+      return `<div class="team-row ${state}"><span class="group-chip" style="--chip:${chipColor}">${grp ? `G${grp}` : '→'}</span><span class="team-name">${flag ? flag + ' ' : ''}${displayName}</span><span class="seed">${seed || ''}</span><span class="winner-mark">${state === 'is-winner' ? 'ADV' : ''}</span></div>`;
     }
-
     function knockoutSeedLabel(m) {
-      return {
-        M73:['2A','2B'], M74:['1E','3ABCDF'], M75:['1F','2C'], M76:['1C','2F'],
-        M77:['1I','3CDFGH'], M78:['2E','2I'], M79:['1A','3CEFHI'], M80:['1L','3EHIJK'],
-        M81:['1G','3AEHIJ'], M82:['1D','3BEFIJ'], M83:['1H','2J'], M84:['2K','2L'],
-        M85:['1B','3EFGIJ'], M86:['2D','2G'], M87:['1J','2H'], M88:['1K','3DEIJL']
-      }[m.matchId] || ['',''];
+      return { M73:['2A','2B'], M74:['1E','3ABCDF'], M75:['1F','2C'], M76:['1C','2F'], M77:['1I','3CDFGH'], M78:['2E','2I'], M79:['1A','3CEFHI'], M80:['1L','3EHIJK'], M81:['1G','3AEHIJ'], M82:['1D','3BEFIJ'], M83:['1H','2J'], M84:['2K','2L'], M85:['1B','3EFGIJ'], M86:['2D','2G'], M87:['1J','2H'], M88:['1K','3DEIJL'] }[m.matchId] || ['',''];
     }
 
     function layoutBracket() {
@@ -1825,69 +1842,34 @@ Final New York New Jersey Stadium`;
       const defs = svg.querySelector('defs');
       svg.innerHTML = '';
       if (defs) svg.appendChild(defs.cloneNode(true));
-
       const stageOrder = ['Round of 32','Round of 16','Quarterfinals','Semifinals','Third place','Final'];
-      const boxW = 286;
-      const boxH = 186;
-      const stageGap = 116;
-      const rowUnit = 206;
-      const topPad = 18;
+      const boxW = 286, boxH = 186, stageGap = 116, rowUnit = 206, topPad = 18;
       const stageX = Object.fromEntries(stageOrder.map((stage, i) => [stage, i * (boxW + stageGap)]));
-      const slotMap = {
-        'Round of 32': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15],
-        'Round of 16': [0.55,2.55,4.55,6.55,8.55,10.55,12.55,14.55],
-        'Quarterfinals': [1.55,5.55,9.55,13.55],
-        'Semifinals': [3.75,11.75],
-        'Third place': [10.2],
-        'Final': [7.75]
-      };
+      const slotMap = { 'Round of 32': [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15], 'Round of 16': [0.55,2.55,4.55,6.55,8.55,10.55,12.55,14.55], 'Quarterfinals': [1.55,5.55,9.55,13.55], 'Semifinals': [3.75,11.75], 'Third place': [10.2], 'Final': [7.75] };
       const positions = {};
-
       stageOrder.forEach(stage => {
-        const matches = KNOCKOUT_MATCHES.filter(m => m.stage === stage);
-        matches.forEach((m, i) => {
-          const slot = slotMap[stage]?.[i] ?? i;
-          positions[m.matchId] = { x: stageX[stage], y: topPad + (slot * rowUnit) };
-        });
+        KNOCKOUT_MATCHES.filter(m => m.stage === stage).forEach((m, i) => { positions[m.matchId] = { x: stageX[stage], y: topPad + ((slotMap[stage]?.[i] ?? i) * rowUnit) }; });
       });
-
       const maxX = Math.max(...Object.values(positions).map(p => p.x)) + boxW + 36;
       const maxY = Math.max(...Object.values(positions).map(p => p.y)) + boxH + 80;
-      canvas.style.width = `${maxX}px`;
-      canvas.style.height = `${maxY}px`;
+      canvas.style.width = `${maxX}px`; canvas.style.height = `${maxY}px`;
       svg.setAttribute('viewBox', `0 0 ${maxX} ${maxY}`);
-      svg.setAttribute('width', String(maxX));
-      svg.setAttribute('height', String(maxY));
+      svg.setAttribute('width', String(maxX)); svg.setAttribute('height', String(maxY));
 
       KNOCKOUT_MATCHES.forEach(m => {
         const pos = positions[m.matchId];
         const box = document.createElement('div');
         box.className = `bracket-box ${stageClass(m.stage)} searchable`;
         box.id = m.matchId;
-        box.style.left = `${pos.x}px`;
-        box.style.top = `${pos.y}px`;
+        box.style.left = `${pos.x}px`; box.style.top = `${pos.y}px`;
         box.dataset.search = `${m.matchId} ${m.stage} ${m.home} ${m.away} ${m.venue} ${m.group || ''}`.toLowerCase();
-
         const seeds = knockoutSeedLabel(m);
-        const homeState = teamStateForMatch(m, m.home);
-        const awayState = teamStateForMatch(m, m.away);
         const bodyRows = m.stage === 'Round of 32'
-          ? renderTeamRow(m.home, '', seeds[0], teamRefGroup(seeds[0]), homeState) + renderTeamRow(m.away, '', seeds[1], teamRefGroup(seeds[1]), awayState)
-          : renderTeamRow(m.home, '', '', null, homeState) + renderTeamRow(m.away, '', '', null, awayState);
-
+          ? renderTeamRow(m.home, '', seeds[0], teamRefGroup(seeds[0]), teamStateForMatch(m, m.home)) + renderTeamRow(m.away, '', seeds[1], teamRefGroup(seeds[1]), teamStateForMatch(m, m.away))
+          : renderTeamRow(m.home, '', '', null, teamStateForMatch(m, m.home)) + renderTeamRow(m.away, '', '', null, teamStateForMatch(m, m.away));
         const nextWinner = m.winnerTargets[0] ? KNOCKOUT_BY_ID[m.winnerTargets[0]] : null;
         const nextLoser = m.loserTargets[0] ? KNOCKOUT_BY_ID[m.loserTargets[0]] : null;
-        const routes = [];
-        if (nextWinner) routes.push(`<span class="route-next"><strong>Winner →</strong> ${nextWinner.matchId} • ${shortRouteDate(nextWinner)}</span>`);
-        if (nextLoser) routes.push(`<span class="route-next"><strong>Loser →</strong> ${nextLoser.matchId} • ${shortRouteDate(nextLoser)}</span>`);
-
-        box.innerHTML = `
-          <div class="bracket-date">${m.matchId} • ${m.date} • ${m.time}</div>
-          <div class="bracket-match">${bodyRows}</div>
-          <div class="result-row">
-            <div>${m.stage.toUpperCase()} • ${m.venue}</div>
-            ${routes.join('')}
-          </div>`;
+        box.innerHTML = `<div class="bracket-date">${m.matchId} • ${m.date} • ${m.time}</div><div class="bracket-match">${bodyRows}</div><div class="result-row"><div>${m.stage.toUpperCase()} • ${m.venue}</div>${nextWinner ? `<span class="route-next"><strong>Winner →</strong> ${nextWinner.matchId} • ${shortRouteDate(nextWinner)}</span>` : ''}${nextLoser ? `<span class="route-next"><strong>Loser →</strong> ${nextLoser.matchId} • ${shortRouteDate(nextLoser)}</span>` : ''}</div>`;
         box.addEventListener('mouseenter', () => focusMatch(m));
         box.addEventListener('mouseleave', clearMapHighlights);
         box.addEventListener('click', () => openModal(m));
@@ -1900,36 +1882,18 @@ Final New York New Jersey Stadium`;
         if (color === cssVar('--theme-orange')) return 'url(#routeArrowOrange)';
         return 'url(#routeArrowPurple)';
       }
-
       function drawPath(fromId, toId, color, dashed = false, routeKind = 'winner') {
-        const fromPos = positions[fromId];
-        const toPos = positions[toId];
-        if (!fromPos || !toPos) return;
-
-        const startX = fromPos.x + boxW;
-        const startY = fromPos.y + (routeKind === 'loser' ? boxH * 0.68 : boxH * 0.50);
-        const endX = toPos.x;
-        const endY = toPos.y + 24;
-        const exitX = startX + 26;
-        const laneX = Math.max(exitX + 18, Math.round(startX + ((endX - startX) * 0.56)));
-        const endLead = endX - 14;
+        const fromPos = positions[fromId]; const toPos = positions[toId]; if (!fromPos || !toPos) return;
+        const startX = fromPos.x + boxW, startY = fromPos.y + (routeKind === 'loser' ? boxH * 0.68 : boxH * 0.50), endX = toPos.x, endY = toPos.y + 24;
+        const exitX = startX + 26, laneX = Math.max(exitX + 18, Math.round(startX + ((endX - startX) * 0.56))), endLead = endX - 14;
         const d = `M ${startX} ${startY} L ${exitX} ${startY} L ${laneX} ${startY} L ${laneX} ${endY} L ${endLead} ${endY}`;
-
         const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        p.setAttribute('class', 'route-line');
-        p.setAttribute('d', d);
-        p.setAttribute('stroke', color);
-        p.setAttribute('stroke-width', dashed ? '2.6' : '3.6');
-        p.setAttribute('marker-end', arrowMarkerFor(color));
+        p.setAttribute('class', 'route-line'); p.setAttribute('d', d); p.setAttribute('stroke', color); p.setAttribute('stroke-width', dashed ? '2.6' : '3.6'); p.setAttribute('marker-end', arrowMarkerFor(color));
         if (dashed) p.setAttribute('stroke-dasharray', '8 7');
         svg.appendChild(p);
       }
-
       KNOCKOUT_MATCHES.forEach(m => {
-        const color = m.stage === 'Round of 32' ? cssVar('--theme-cyan')
-          : m.stage === 'Round of 16' ? cssVar('--theme-pink')
-          : m.stage === 'Quarterfinals' ? cssVar('--theme-orange')
-          : cssVar('--theme-purple');
+        const color = m.stage === 'Round of 32' ? cssVar('--theme-cyan') : m.stage === 'Round of 16' ? cssVar('--theme-pink') : m.stage === 'Quarterfinals' ? cssVar('--theme-orange') : cssVar('--theme-purple');
         m.winnerTargets.forEach(t => drawPath(m.matchId, t, color, false, 'winner'));
         m.loserTargets.forEach(t => drawPath(m.matchId, t, cssVar('--theme-orange'), true, 'loser'));
       });
@@ -1939,125 +1903,30 @@ Final New York New Jersey Stadium`;
       const term = document.getElementById('diagramSearch').value.trim().toLowerCase();
       document.querySelectorAll('.searchable').forEach(el => {
         const match = !term || (el.dataset.search || '').includes(term);
-        if (el.classList.contains('bracket-box')) {
-          el.classList.toggle('hidden-by-search', !match);
-        } else {
-          el.style.display = match ? '' : 'none';
-        }
+        if (el.classList.contains('bracket-box')) el.classList.toggle('hidden-by-search', !match);
+        else el.style.display = match ? '' : 'none';
       });
     }
 
-    function clearLayers(arr, map) { while (arr.length) map.removeLayer(arr.pop()); }
-    function clearMapHighlights() {
-      if (geoMap) clearLayers(geoLayers, geoMap);
-      if (stadiumMap) clearLayers(stadiumLayers, stadiumMap);
+    function formatInTimeZone(date, timeZone) {
+      return new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone }).format(date);
     }
-
-    function haversineKm(a, b) {
-      const toRad = (d) => d * Math.PI / 180;
-      const R = 6371;
-      const dLat = toRad(b[0] - a[0]);
-      const dLng = toRad(b[1] - a[1]);
-      const lat1 = toRad(a[0]);
-      const lat2 = toRad(b[0]);
-      const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-      return 2 * R * Math.asin(Math.sqrt(h));
-    }
-
-    function kmToFeet(km) {
-      return km * 3280.84;
-    }
-
-    function formatDistancePair(a, b) {
-      const km = haversineKm(a, b);
-      const feet = kmToFeet(km);
-      return `${km.toLocaleString(undefined, { maximumFractionDigits: 0 })} km • ${feet.toLocaleString(undefined, { maximumFractionDigits: 0 })} ft`;
-    }
-
-            function addCountryCircle(map, coords, color, label, store) {
-      if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) return;
-      const circle = L.circle(coords, { radius: 620000, color, weight: 3, fillColor: color, fillOpacity: .18 }).addTo(map);
-      circle.bindTooltip(label, { direction:'top', opacity:.96 });
-      store.push(circle);
-      return circle;
-    }
-
-    function addRouteLine(map, fromCoords, toCoords, color, label, store, dashed = false) {
-      if (!fromCoords || !toCoords) return;
-      const line = L.polyline([fromCoords, toCoords], {
-        color,
-        weight: 3,
-        opacity: 0.9,
-        dashArray: dashed ? '8 8' : null
-      }).addTo(map);
-      if (label) line.bindTooltip(label, { sticky: true, opacity: 0.96 });
-      store.push(line);
-      return line;
-    }
-
-    function focusMatch(match) {
-      clearMapHighlights();
-      const venue = VENUES[match.venue];
-      const homeCoords = COUNTRY_COORDS[match.home];
-      const awayCoords = COUNTRY_COORDS[match.away];
-      const geoBounds = [];
-      if (geoMap) {
-        if (homeCoords && match.home !== 'World Cup winner') {
-          addCountryCircle(geoMap, homeCoords, cssVar('--theme-green'), match.home, geoLayers);
-          geoBounds.push(homeCoords);
-        }
-        if (awayCoords && match.away !== 'World Cup runner-up') {
-          addCountryCircle(geoMap, awayCoords, cssVar('--theme-orange'), match.away, geoLayers);
-          geoBounds.push(awayCoords);
-        }
-        if (venue) {
-          const marker = L.circleMarker(venue.coord, { radius: 9, color:'#fff', weight:1.5, fillColor: cssVar('--theme-pink'), fillOpacity: .95 }).addTo(geoMap);
-          marker.bindPopup(`<b>${venue.name}</b><br><small>${match.home} vs ${match.away}</small>`).openPopup();
-          geoLayers.push(marker);
-          geoBounds.push(venue.coord);
-        }
-
-        if (homeCoords && venue) {
-          addRouteLine(geoMap, homeCoords, venue.coord, cssVar('--theme-green'), `${match.home} → ${venue.name}<br>${formatDistancePair(homeCoords, venue.coord)}`, geoLayers, false);
-        }
-        if (awayCoords && venue) {
-          addRouteLine(geoMap, awayCoords, venue.coord, cssVar('--theme-orange'), `${match.away} → ${venue.name}<br>${formatDistancePair(awayCoords, venue.coord)}`, geoLayers, false);
-        }        if (geoBounds.length) {
-          geoMap.fitBounds(L.latLngBounds(geoBounds), { padding: [36, 36], maxZoom: 3 });
-        } else {
-          geoMap.fitWorld({ padding: [20, 20] });
-        }
-      }
-      if (stadiumMap && venue) {
-        const marker = L.circleMarker(venue.coord, { radius: 10, color:'#fff', weight:1.6, fillColor: cssVar('--theme-cyan'), fillOpacity: .95 }).addTo(stadiumMap);
-        marker.bindPopup(`<b>${venue.name}</b><br><small>${match.date} • ${match.time}</small>`).openPopup();
-        stadiumLayers.push(marker);
-        if (homeCoords) addRouteLine(stadiumMap, homeCoords, venue.coord, cssVar('--theme-green'), `${match.home} → ${venue.name}<br>${formatDistancePair(homeCoords, venue.coord)}`, stadiumLayers, false);
-        if (awayCoords) addRouteLine(stadiumMap, awayCoords, venue.coord, cssVar('--theme-orange'), `${match.away} → ${venue.name}<br>${formatDistancePair(awayCoords, venue.coord)}`, stadiumLayers, false);
-        const stadiumBounds = [venue.coord];
-        if (homeCoords) stadiumBounds.push(homeCoords);
-        if (awayCoords) stadiumBounds.push(awayCoords);
-        stadiumMap.fitBounds(L.latLngBounds(stadiumBounds), { padding: [32, 32], maxZoom: 4 });
-      }
-    }
-
     function openModal(match) {
       const venue = VENUES[match.venue];
+      const dt = parseMatchDateTime(match);
       document.getElementById('modalStage').textContent = match.stage === 'Group stage' ? `Group ${match.group}` : match.stage;
       document.getElementById('modalFixture').textContent = `${match.home} vs ${match.away}`;
       document.getElementById('modalDate').textContent = `${match.date} • ${match.time}`;
       document.getElementById('modalVenue').textContent = match.venue;
       document.getElementById('modalVenueDetails').innerHTML = venue ? `<b>City:</b> ${venue.city}<br><b>Capacity:</b> ${venue.cap}<br><b>Profile:</b> ${venue.info}` : 'Venue data unavailable';
-      document.getElementById('modalTimeLocal').textContent = match.time;
-      document.getElementById('modalTimeCest').textContent = match.time;
-      document.getElementById('modalTimeUk').textContent = match.time;
+      document.getElementById('modalTimeLocal').textContent = dt ? formatInTimeZone(dt, Intl.DateTimeFormat().resolvedOptions().timeZone) : match.time;
+      document.getElementById('modalTimeCest').textContent = dt ? formatInTimeZone(dt, 'Europe/Paris') : match.time;
+      document.getElementById('modalTimeUk').textContent = dt ? formatInTimeZone(dt, 'Europe/London') : match.time;
       document.getElementById('modalLink').href = venue ? `https://www.google.com/search?q=${encodeURIComponent(venue.search)}&tbm=isch` : '#';
       document.getElementById('modalOverlay').style.display = 'flex';
       focusMatch(match);
     }
-
     function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
-
     function openAboutPage() { document.getElementById('aboutPageOverlay').style.display = 'flex'; }
     function closeAboutPage() { document.getElementById('aboutPageOverlay').style.display = 'none'; }
 
@@ -2067,6 +1936,12 @@ Final New York New Jersey Stadium`;
       document.getElementById('lightBtn').classList.toggle('active', mode === 'light');
       const filter = mode === 'dark' ? 'saturate(1.15) hue-rotate(182deg) brightness(.9)' : 'none';
       ['geoMap','stadiumMap'].forEach(id => { const el = document.getElementById(id); if (el) el.style.filter = filter; });
+      if (countryLayer) countryLayer.setStyle(baseCountryStyle());
+      if (countryHighlightLayers.length) {
+        const names = countryHighlightLayers.slice();
+        countryHighlightLayers = [];
+        names.forEach(layer => countryLayer.resetStyle(layer));
+      }
     }
 
     function updateCountdowns() {
@@ -2075,13 +1950,8 @@ Final New York New Jersey Stadium`;
         const action = getScheduleActionState(m);
         btn.textContent = action.label;
         btn.className = `schedule-action-btn ${action.type === 'live' ? 'live' : action.type === 'today' ? 'today' : 'dim'}`;
-        if (action.interactive) {
-          btn.disabled = false;
-        } else {
-          btn.disabled = true;
-        }
+        btn.disabled = !action.interactive;
       });
-      renderScheduleTable();
     }
 
     function initMaps() {
@@ -2090,6 +1960,7 @@ Final New York New Jersey Stadium`;
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(geoMap);
       L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(stadiumMap);
       applyTheme(document.documentElement.dataset.theme || 'dark');
+      ensureCountryLayer();
     }
 
     document.getElementById('darkBtn').addEventListener('click', () => applyTheme('dark'));
@@ -2104,19 +1975,8 @@ Final New York New Jersey Stadium`;
     window.addEventListener('resize', () => setTimeout(layoutBracket, 60));
 
     window.addEventListener('load', () => {
-      setClock();
-      setInterval(setClock, 1000);
-      setInterval(updateWorldTimes, 1000);
-      initTicker();
-      renderWorldTimes();
-      renderUpcoming();
-      renderScheduleTable();
-      renderGroupTabs();
-      renderGroupRoutes();
-      layoutBracket();
-      initMaps();
-      updateCountdowns();
-      setInterval(updateCountdowns, 1000);
+      setClock(); setInterval(setClock, 1000); setInterval(updateWorldTimes, 1000);
+      initTicker(); renderWorldTimes(); renderUpcoming(); renderScheduleTable(); renderGroupTabs(); renderGroupRoutes(); layoutBracket(); initMaps(); updateCountdowns(); setInterval(updateCountdowns, 1000);
       focusMatch(ALL_MATCHES[0]);
       setTimeout(() => { geoMap.invalidateSize(); stadiumMap.invalidateSize(); layoutBracket(); if (geoMap) geoMap.fitWorld({ padding: [18, 18] }); if (stadiumMap) stadiumMap.fitWorld({ padding: [18, 18] }); }, 600);
     });
