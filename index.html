@@ -2808,29 +2808,38 @@ function parseFeedItems(xmlText, source) {
   }).filter(item => item.title && !isGenericCoverageTitle(item.title, item.source));
 }
 
+function formatNewsRefreshTime() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 async function loadLiveNews() {
   const status = document.getElementById('newsStatus');
   if (status) status.textContent = 'LIVE FEEDS • Refreshing latest distinct headlines...';
-  const settled = await Promise.allSettled(LIVE_NEWS_SOURCES.map(async source => {
-    try {
-      const xmlText = await fetchFeedText(buildNewsFeedUrl(source));
-      const parsed = parseFeedItems(xmlText, source)
-        .filter(item => item.title && !isGenericCoverageTitle(item.title, source.name))
-        .map(item => ({ ...item, label: `${item.source} • ${item.title}` }))
-        .slice(0, 6);
-      return parsed.length ? parsed : NEWS_FALLBACK_LINKS.filter(item => item.source === source.name).map(item => ({ ...item, label: `${item.source} • ${item.title}` })).slice(0, 2);
-    } catch {
-      return NEWS_FALLBACK_LINKS.filter(item => item.source === source.name).map(item => ({ ...item, label: `${item.source} • ${item.title}` })).slice(0, 2);
-    }
-  }));
-  const items = settled.filter(result => result.status === 'fulfilled').flatMap(result => result.value || []);
-  const uniqueItems = dedupeNewsItems(items)
-    .filter(item => item.title && !isGenericCoverageTitle(item.title, item.source))
-    .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-  const displayItems = uniqueItems.length ? uniqueItems.slice(0, 30) : NEWS_FALLBACK_LINKS.map(item => ({ ...item, label: `${item.source} • ${item.title}` }));
-  renderTickerItems(displayItems);
-  const activeSources = new Set(displayItems.map(item => item.source)).size;
-  if (status) status.textContent = `LIVE FEEDS • ${activeSources}/${LIVE_NEWS_SOURCES.length} sources active • Latest headlines refresh automatically`;
+  try {
+    const settled = await Promise.allSettled(LIVE_NEWS_SOURCES.map(async source => {
+      try {
+        const xmlText = await fetchFeedText(buildNewsFeedUrl(source));
+        const parsed = parseFeedItems(xmlText, source)
+          .filter(item => item.title && !isGenericCoverageTitle(item.title, source.name))
+          .map(item => ({ ...item, label: `${item.source} • ${item.title}` }))
+          .slice(0, 6);
+        return parsed.length ? parsed : NEWS_FALLBACK_LINKS.filter(item => item.source === source.name).map(item => ({ ...item, label: `${item.source} • ${item.title}` })).slice(0, 2);
+      } catch {
+        return NEWS_FALLBACK_LINKS.filter(item => item.source === source.name).map(item => ({ ...item, label: `${item.source} • ${item.title}` })).slice(0, 2);
+      }
+    }));
+    const items = settled.filter(result => result.status === 'fulfilled').flatMap(result => result.value || []);
+    const uniqueItems = dedupeNewsItems(items)
+      .filter(item => item.title && !isGenericCoverageTitle(item.title, item.source))
+      .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+    const displayItems = uniqueItems.length ? uniqueItems.slice(0, 30) : NEWS_FALLBACK_LINKS.map(item => ({ ...item, label: `${item.source} • ${item.title}` }));
+    renderTickerItems(displayItems);
+    const activeSources = new Set(displayItems.map(item => item.source)).size;
+    if (status) status.textContent = `LIVE FEEDS • ${activeSources}/${LIVE_NEWS_SOURCES.length} sources active • Updated ${formatNewsRefreshTime()}`;
+  } catch {
+    renderTickerItems(NEWS_FALLBACK_LINKS.map(item => ({ ...item, label: `${item.source} • ${item.title}` })));
+    if (status) status.textContent = `LIVE FEEDS • Fallback headlines active • Updated ${formatNewsRefreshTime()}`;
+  }
 }
 
 function weatherCodeLabel(code) {
@@ -3434,6 +3443,8 @@ function openModal(match) {
     document.getElementById('aboutPageOverlay').addEventListener('click', closeAboutPage);
 
     window.addEventListener('resize', () => setTimeout(() => { syncBracketShellHeight(); layoutBracket(); fitBracketToView(); }, 60));
+    window.addEventListener('focus', () => { loadLiveNews().catch(() => {}); });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) loadLiveNews().catch(() => {}); });
 
     window.addEventListener('load', () => {
       registerNavvaPwa();
@@ -3456,7 +3467,7 @@ function openModal(match) {
       loadVenueWeatherData();
       setInterval(updateCountdowns, 1000);
       setInterval(() => loadLiveTournamentData().catch(() => {}), 30 * 1000);
-      setInterval(loadLiveNews, 5 * 60 * 1000);
+      setInterval(() => loadLiveNews().catch(() => {}), 2 * 60 * 1000);
       setInterval(loadVenueWeatherData, 10 * 60 * 1000);
       focusMatch(ALL_MATCHES[0]);
       setTimeout(() => {
